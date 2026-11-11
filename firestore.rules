@@ -1,0 +1,127 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- 共通セキュリティ関数 ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function currentUserStaff() {
+      return get(/databases/$(database)/documents/staff/$(request.auth.uid)).data;
+    }
+
+    function isStaffActive() {
+      return isSignedIn() && exists(/databases/$(database)/documents/staff/$(request.auth.uid))
+        && currentUserStaff().active == true;
+    }
+
+    function isAdmin() {
+      return isStaffActive() && currentUserStaff().role == 'admin';
+    }
+
+    // 指定タブの利用許可判定
+    function hasTab(tab) {
+      return isAdmin() || (isStaffActive() && (tab in currentUserStaff().allowedTabs));
+    }
+
+    // リスト削除権限判定
+    function canDeleteList() {
+      return isAdmin() || (hasTab('register') && currentUserStaff().actions.deleteList == true);
+    }
+
+    // デフォルト拒否（Default Deny）
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 1. 社員情報コレクション (/staff)
+    // 閲覧: ログインユーザー（本人照合・社員表示のため）
+    // 作成・削除: 管理者のみ
+    // 更新: 管理者のみ（本人は初回パスワード変更時の mustChangePassword のみ）
+    match /staff/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (
+        isSignedIn() && request.auth.uid == uid && isStaffActive()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword', 'version', 'updatedAt', 'updatedBy'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 2. 製造リスト (/lists)
+    // 閲覧: ログイン済みのアクティブ社員なら全件読み取り可能（個人情報なし・無料枠運用のため厳密制限不要）
+    // 作成: 「リスト登録」タブの許可がある社員または管理者
+    // 削除: 管理者またはリスト削除許可
+    // 更新: 許可された工程・項目のデータのみ書き換え可能（他の工程のデータ書き換え禁止）
+    match /lists/{serial} {
+      allow read: if isStaffActive();
+
+      allow create: if isStaffActive() && (isAdmin() || hasTab('register'));
+
+      allow update: if isStaffActive() && (
+        isAdmin() ||
+        // 削除（論理削除）フラグ更新
+        (request.resource.data.diff(resource.data).affectedKeys().hasAny(['deleted', 'deletedAt', 'deletedBy']) && canDeleteList()) ||
+        // 項目別きめ細かな書き込み制御（許可されていない工程・タブの項目書き換えをFirestoreで物理遮断）
+        (
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['serial','sourceFile','due','dueStart','dueEnd','deliveryMethod','cutMethod','fullyOutsourced','job','customer','destination','processes','rows','processOrder','holeCount','holeDiameters','createdAt','delivered']) || hasTab('register')) &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['deliveryNote']) || hasTab('register') || hasTab('delivery')) &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['deliveryInfo']) || hasTab('delivery')) &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['processStatus','processDates','processDoneDates','processCompleted','processNotes']) || hasTab('production') || hasTab('stage-cut') || hasTab('stage-bandsaw') || hasTab('stage-kiri') || hasTab('stage-shot') || hasTab('stage-bevel') || hasTab('stage-bend')) &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['pileCount','pileMap','loads']) || hasTab('production') || hasTab('loading') || hasTab('stage-cut') || hasTab('stage-bandsaw') || hasTab('stage-kiri') || hasTab('stage-shot') || hasTab('stage-bevel') || hasTab('stage-bend'))
+        )
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // 3. 配送イベント (/events)
+    match /events/{eventId} {
+      allow read: if isStaffActive();
+      allow create, update: if isStaffActive() && (isAdmin() || hasTab('delivery'));
+      allow delete: if isAdmin();
+    }
+
+    // 4. 工程表・配達表メモ (/boards)
+    match /boards/{boardId} {
+      allow read: if isStaffActive();
+      allow create, update: if isStaffActive() && (
+        isAdmin() ||
+        hasTab('delivery') ||
+        hasTab('stage-cut') ||
+        hasTab('stage-bandsaw') ||
+        hasTab('stage-kiri') ||
+        hasTab('stage-shot') ||
+        hasTab('stage-bevel') ||
+        hasTab('stage-bend')
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 5. 設定（切断速度など） (/settings)
+    match /settings/{settingId} {
+      allow read: if isStaffActive();
+      allow create, update: if isStaffActive() && (isAdmin() || hasTab('plan'));
+      allow delete: if isAdmin();
+    }
+
+    // 6. 採番カウンタ (/counters)
+    match /counters/{counterId} {
+      allow read: if isStaffActive();
+      allow create, update: if isStaffActive() && (isAdmin() || hasTab('register'));
+      allow delete: if isAdmin();
+    }
+
+    // 7. 監査ログ (/auditLogs)
+    // 閲覧・作成: アクティブ社員
+    // 削除: 管理者のみ（30日超過分の一括削除用）
+    // 更新: 不可（改ざん防止）
+    match /auditLogs/{logId} {
+      allow read: if isStaffActive();
+      allow create: if isStaffActive();
+      allow delete: if isAdmin();
+      allow update: if false;
+    }
+  }
+}
