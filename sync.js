@@ -1096,6 +1096,7 @@ function renderStaffAdmin(docs){
 
   document.getElementById('stfAdd').onclick = addStaffRecord;
   box.querySelectorAll('[data-save]').forEach(b => b.onclick = () => saveStaff(b.dataset.save));
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => deleteStaff(b.dataset.del));
 }
 
 function staffRow(r, adminsActive){
@@ -1157,8 +1158,9 @@ function staffRow(r, adminsActive){
           <span><b>リストの削除を許可</b>（「リスト登録」タブが許可されている場合のみ有効）</span>
         </label>
       </div>
-      <div style="margin-top:10px">
+      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px">
         <button class="btn small" type="button" data-save="${esc(r.id)}">権限設定を保存</button>
+        <button class="btn small" type="button" data-del="${esc(r.id)}" style="background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5;cursor:pointer">🗑️ 社員を削除</button>
       </div>
     `}
   </div>`;
@@ -1254,6 +1256,39 @@ async function saveStaff(uid){
     toast('社員の権限設定を保存しました');
   } catch(e) {
     toast('保存できませんでした：' + (e.message || e), 'err');
+  }
+}
+
+async function deleteStaff(uid){
+  if(uid === S.uid){
+    alert('ログイン中の自分自身のアカウントは削除できません。');
+    return;
+  }
+  const cur = STAFF_CACHE.find(x => x.id === uid);
+  const name = cur ? `${cur.data.name || ''}（ID: ${cur.data.staffId || ''}）` : uid;
+
+  const wasAdminActive = cur && cur.data.role === 'admin' && cur.data.active;
+  if(wasAdminActive && STAFF_CACHE.filter(x => x.data.role === 'admin' && x.data.active).length <= 1){
+    alert('有効な管理者が0人になってしまうため削除できません。');
+    return;
+  }
+
+  if(!confirm(`社員「${name}」を削除しますか？\n\n【注意】\n削除すると、この社員情報は一覧から消去され、システムにログインできなくなります。`)){
+    return;
+  }
+
+  try {
+    await S.store.runTx(async tx => {
+      tx.delete('staff', uid);
+      if(S.enableAudit){
+        tx.set('auditLogs', logId('staff', uid, Date.now()), {
+          at: TS, by: S.uid, byId: (S.staff && S.staff.staffId) || S.uid, col: 'staff', docId: uid, op: 'delete', version: 0, fields: []
+        });
+      }
+    });
+    toast(`社員「${name}」の登録情報を削除しました`);
+  } catch(e) {
+    toast('削除できませんでした：' + (e.message || e), 'err');
   }
 }
 
