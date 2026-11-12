@@ -279,9 +279,10 @@ function docToList(d, selMap){
   }
   return l;
 }
-const skipLocal = p => p[0] === 'pileItems';
-const SERVER_STRIP = ['deleted','deletedAt','deletedBy','version','updatedAt','updatedBy','createdBy'];
+const SERVER_STRIP = ['deleted','deletedAt','deletedBy','updatedAt','updatedBy','createdBy'];
+const skipLocal = p => p[0] === 'pileItems' || p[0] === 'version' || SERVER_STRIP.includes(p[0]);
 function stripServer(d){ const x = clone(d); SERVER_STRIP.forEach(k => delete x[k]); return x; }
+
 
 function allowed(col, id, kind, ops){
   const err = Policy.check(S.staff, col, id, kind, kind === 'create' ? [] : topFields(ops));
@@ -310,8 +311,8 @@ async function txUpdate(tx, col, id, ops, base, pre){
   if(!cur) throw Object.assign(new Error('対象データが存在しません'), { code: 'missing' });
 
   // 厳格なバージョン照合：編集開始時の base.version とサーバーの cur.version を比較
-  const curVer = cur.version || 0;
-  const baseVer = (base && base.version) || 0;
+  const curVer = cur.version || 1;
+  const baseVer = (base && base.version) || 1;
 
   // 編集開始後に対象データが更新されていた場合、自動マージせず保存を拒否
   if(curVer !== baseVer){
@@ -370,22 +371,27 @@ function showConflictDialog(info){
     dlg.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.8);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
     document.body.appendChild(dlg);
   }
-  const who = info.updatedBy || '他の社員';
+  const whoUid = (info.cur && info.cur.updatedBy) || info.updatedBy || '';
+  const isMe = whoUid && whoUid === S.uid;
+  const staffObj = STAFF_CACHE.find(x => x.id === whoUid);
+  const who = isMe
+    ? 'あなた（別の端末または直前の操作）'
+    : (staffObj ? `${staffObj.data.name}（ID: ${staffObj.data.staffId}）` : (whoUid || '他の社員'));
   const when = info.updatedAt ? new Date(info.updatedAt).toLocaleTimeString('ja-JP') : '直前';
 
   dlg.innerHTML = `
     <div style="background:#fff;border-radius:16px;width:min(94vw,540px);padding:24px;box-shadow:0 25px 50px -12px rgba(0,0,0,.3);border:2px solid #ef4444;box-sizing:border-box">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
         <span style="font-size:28px">⚠️</span>
-        <h2 style="margin:0;font-size:18px;font-weight:800;color:#991b1b">他の社員が先に更新しました</h2>
+        <h2 style="margin:0;font-size:18px;font-weight:800;color:#991b1b">最新データが更新されています</h2>
       </div>
       <p style="margin:0 0 14px;color:#1e293b;font-size:14px;line-height:1.6">
-        工程番号 <b>${esc(info.id)}</b> は、あなたが編集中に <b>${esc(who)}</b> さんによって <b>${esc(when)}</b> に更新されました。
+        工程番号 <b>${esc(info.id)}</b> は、<b>${esc(who)}</b> によって <b>${esc(when)}</b> に更新されています。
       </p>
       <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:#7f1d1d">
         <b>【保存できません】</b><br>
-        データの上書き事故を防ぐため、保存は拒否されました。<br>
-        最新データを読み直してから、再度編集してください。
+        データの上書き事故を防ぐため、保存は保留されました。<br>
+        「最新データを読み直す」を押してから、編集してください。
       </div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <button id="cfReloadBtn" type="button" style="padding:12px;font-size:14px;font-weight:700;background:#2563eb;color:#fff;border:0;border-radius:10px;cursor:pointer">
@@ -401,16 +407,17 @@ function showConflictDialog(info){
 
   document.getElementById('cfReloadBtn').onclick = () => {
     dlg.style.display = 'none';
-    const latestDoc = stripServer(info.cur);
+    const latestDoc = { ...stripServer(info.cur), version: (info.cur && info.cur.version) || 1 };
     S.base.lists.set(info.id, latestDoc);
     const ls = docToList(latestDoc);
+    ls.version = (info.cur && info.cur.version) || 1;
     S.B.normalize && S.B.normalize(ls);
     const all = S.B.getLists().slice();
     const idx = all.findIndex(l => String(l.serial) === String(info.id));
     if(idx >= 0) all[idx] = ls; else all.push(ls);
     S.B.setLists(all);
     S.B.renderSoon();
-    toast(`工程番号 ${info.id} の最新データを読み直しました。再編集を行ってください。`, 'warn');
+    toast(`工程番号 ${info.id} の最新データを読み直しました`);
   };
 
   document.getElementById('cfCloseBtn').onclick = () => {
@@ -481,7 +488,10 @@ function pushLists(){ return chain(S.q, 'lists', async () => {
         else if(r.gone){ toast(`工程番号 ${id} は他社員に削除されています`, 'err'); }
         else {
           S.pendingCreate.delete(id);
-          S.base.lists.set(id, r.j.kind === 'create' ? clone(r.j.doc) : stripServer(r.latest));
+          const savedDoc = r.j.kind === 'create'
+            ? { ...clone(r.j.doc), version: 1 }
+            : { ...stripServer(r.latest), version: r.version || (r.latest && r.latest.version) || 1 };
+          S.base.lists.set(id, savedDoc);
         }
       }
     }
@@ -653,8 +663,12 @@ function ingestLists(union){
     const old = S.base.lists.get(id);
     const pend = (prev && old) ? diff(old, listToDoc(prev), skipLocal) : [];
     const sel = {}; if(prev)(prev.pileItems || []).forEach(p => { if(p._selected) sel[p.id] = true; });
-    const ls = docToList(server); B.normalize && B.normalize(ls);
-    const baseDoc = listToDoc(ls); S.base.lists.set(id, baseDoc);
+    const ls = docToList(server);
+    ls.version = sd.version || 1;
+    B.normalize && B.normalize(ls);
+    const baseDoc = listToDoc(ls);
+    baseDoc.version = sd.version || 1;
+    S.base.lists.set(id, baseDoc);
     const merged = pend.length ? docToList(applyOps(baseDoc, pend), sel) : docToList(baseDoc, sel);
     if(sd.deliveryInfo){
       S.base.info = S.base.info || new Map();
@@ -865,11 +879,6 @@ function ui(){
       <label>パスワード</label>
       <input id="authPw" type="password" autocomplete="current-password" placeholder="パスワードを入力">
       <button id="authBtn" type="button" class="btn-primary">ログイン</button>
-      <div style="margin-top:14px;padding-top:10px;border-top:1px dashed #e2e8f0;text-align:center">
-        <a href="/production_system_free_plan.zip" download="production_system_free_plan.zip" style="font-size:12px;color:#2563eb;text-decoration:underline;font-weight:700">
-          📦 全ファイル一式（ZIPアーカイブ）をダウンロード
-        </a>
-      </div>
     </div>
 
     <!-- 初回／変更時のパスワード設定フォーム -->
