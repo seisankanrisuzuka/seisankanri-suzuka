@@ -68,8 +68,8 @@ service cloud.firestore {
           (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['serial','sourceFile','due','dueStart','dueEnd','deliveryMethod','cutMethod','fullyOutsourced','job','customer','destination','processes','rows','processOrder','holeCount','holeDiameters','createdAt','delivered']) || hasTab('register')) &&
           (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['deliveryNote']) || hasTab('register') || hasTab('delivery')) &&
           (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['deliveryInfo']) || hasTab('delivery')) &&
-          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['processStatus','processDates','processDoneDates','processCompleted','processNotes']) || hasTab('production') || hasTab('stage-cut') || hasTab('stage-bandsaw') || hasTab('stage-kiri') || hasTab('stage-shot') || hasTab('stage-bevel') || hasTab('stage-bend')) &&
-          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['pileCount','pileMap','loads']) || hasTab('production') || hasTab('loading') || hasTab('stage-cut') || hasTab('stage-bandsaw') || hasTab('stage-kiri') || hasTab('stage-shot') || hasTab('stage-bevel') || hasTab('stage-bend'))
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['processStatus','processDates','processDoneDates','processCompleted','processStarted','processNotes']) || hasTab('production') || hasTab('stage-cut') || hasTab('stage-bandsaw') || hasTab('stage-kiri') || hasTab('stage-shot') || hasTab('stage-bevel') || hasTab('stage-bend')) &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['piles','pileItems','loads','pileCount','pileMap']) || hasTab('production') || hasTab('loading') || hasTab('stage-cut') || hasTab('stage-bandsaw') || hasTab('stage-kiri') || hasTab('stage-shot') || hasTab('stage-bevel') || hasTab('stage-bend'))
         )
       );
 
