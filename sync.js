@@ -24,7 +24,14 @@ window.SYNC_ON = true;
 /* ---------- 共通ユーティリティ ---------- */
 const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
 const clone = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
-const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function canonicalJson(v){
+  if(v === undefined) return undefined;
+  if(v === null || typeof v !== 'object') return JSON.stringify(v);
+  if(Array.isArray(v)) return '[' + v.map(canonicalJson).join(',') + ']';
+  const keys = Object.keys(v).filter(k => v[k] !== undefined && k !== '_rowId' && k !== '_selected').sort();
+  return '{' + keys.map(k => JSON.stringify(k) + ':' + canonicalJson(v[k])).join(',') + '}';
+}
+const eq = (a, b) => canonicalJson(a) === canonicalJson(b);
 const TS = { __ts: true };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function getPath(o, p){ let t = o; for(const k of p){ if(t == null) return undefined; t = t[k]; } return t; }
@@ -84,8 +91,8 @@ const TAB_IDS = ALL_BUSINESS_TABS.map(t => t.id);
 const FIELD_GROUP = {};
 ['serial','sourceFile','due','dueStart','dueEnd','deliveryMethod','cutMethod','fullyOutsourced','job','customer','destination','processes','rows','processOrder','holeCount','holeDiameters','createdAt','delivered'].forEach(k => FIELD_GROUP[k] = 'info');
 FIELD_GROUP.deliveryNote = 'note';
-['processStatus','processDates','processDoneDates','processCompleted','processNotes'].forEach(k => FIELD_GROUP[k] = 'progress');
-['pileCount','pileMap','loads'].forEach(k => FIELD_GROUP[k] = 'piles');
+['processStatus','processDates','processDoneDates','processCompleted','processStarted','processNotes'].forEach(k => FIELD_GROUP[k] = 'progress');
+['piles','pileItems','loads','pileCount','pileMap'].forEach(k => FIELD_GROUP[k] = 'piles');
 FIELD_GROUP.deliveryInfo = 'delivery';
 const DERIVED = ['isOpen','closedDay'], STAMP = ['version','updatedAt','updatedBy','createdBy'], DELF = ['deleted','deletedAt','deletedBy'];
 const ALL_LIST_FIELDS = [...Object.keys(FIELD_GROUP), ...DERIVED, ...STAMP, ...DELF];
@@ -248,39 +255,25 @@ const toast = (m, kind) => {
 function listToDoc(l){
   const d = {};
   ALL_LIST_FIELDS.forEach(k => { if(l[k] !== undefined) d[k] = clone(l[k]); });
-  d.pileMap = d.pileMap || {};
-  (l.pileItems || []).forEach(p => { d.pileMap[p.id] = { pile: p.pile, pos: p.pos }; });
+  d.piles = (l.piles !== undefined && l.piles !== null && l.piles !== '') ? Number(l.piles) : null;
+  d.pileItems = Array.isArray(l.pileItems) ? clone(l.pileItems) : [];
+  d.loads = Array.isArray(l.loads) ? clone(l.loads) : [];
   d.isOpen = !(l.delivered || (l.processCompleted && Object.values(l.processCompleted).every(Boolean)));
   d.closedDay = d.isOpen ? '' : ((l.processDoneDates && Object.values(l.processDoneDates).sort().pop()) || today());
   return d;
 }
 function docToList(d, selMap){
   const l = clone(d) || {};
-  const piles = {};
-  if(l.pileMap){
-    l.pileItems = [];
-    const done = l.processCompleted && l.processCompleted['切断'];
-    const grps = {};
-    (l.rows || []).forEach(r => {
-      const mat = r[1] || '', sz = r[2] || '';
-      const key = mat.startsWith('PL') ? `${mat}__${sz.replace(/[*xX].*$/, '')}` : `${mat}__${sz}`;
-      grps[key] = grps[key] || []; grps[key].push(r);
-    });
-    let idx = 1;
-    for(const key of Object.keys(grps)){
-      const r0 = grps[key][0], q = grps[key].reduce((a, r) => a + (+r[4] || 0), 0);
-      const id = `${l.serial}-${idx++}`;
-      const sv = l.pileMap[id] || {};
-      const p = { id, serial: l.serial, job: l.job, customer: l.customer, destination: l.destination, material: r0[1] || '', spec: r0[2] || '', qty: q, weight: 0, pile: sv.pile || '未割当', pos: sv.pos || idx, cutCompleted: !!done };
-      if(selMap && selMap[id]) p._selected = true;
-      piles[p.pile] = piles[p.pile] || []; piles[p.pile].push(p);
-      l.pileItems.push(p);
-    }
+  if(l.piles !== undefined && l.piles !== null && l.piles !== '') l.piles = Number(l.piles);
+  l.pileItems = Array.isArray(l.pileItems) ? l.pileItems : [];
+  l.loads = Array.isArray(l.loads) ? l.loads : [];
+  if(selMap && l.pileItems.length){
+    l.pileItems.forEach(p => { if(selMap[p.id]) p._selected = true; });
   }
   return l;
 }
 const SERVER_STRIP = ['deleted','deletedAt','deletedBy','updatedAt','updatedBy','createdBy'];
-const skipLocal = p => p[0] === 'pileItems' || p[0] === 'version' || SERVER_STRIP.includes(p[0]);
+const skipLocal = p => p[0] === 'version' || SERVER_STRIP.includes(p[0]);
 function stripServer(d){ const x = clone(d); SERVER_STRIP.forEach(k => delete x[k]); return x; }
 
 
@@ -431,15 +424,46 @@ function pushLists(){ return chain(S.q, 'lists', async () => {
   const B = S.B, L = B.getLists(); B.ensure && L.forEach(B.ensure);
   const cur = new Map(L.map(l => [String(l.serial), listToDoc(l)]));
   const jobs = [];
+  const staff = S.staff;
+  const isAdmin = Policy.admin(staff);
+  const hasRegister = Policy.hasTab(staff, 'register');
+  const hasDelivery = Policy.hasTab(staff, 'delivery');
+  const hasProg = Policy.hasTab(staff, 'production') || STAGE_TABS.some(t => Policy.hasTab(staff, t));
+  const hasPile = Policy.hasTab(staff, 'production') || Policy.hasTab(staff, 'loading') || STAGE_TABS.some(t => Policy.hasTab(staff, t));
+
   for(const [id, doc] of cur){
     const b = S.base.lists.get(id);
-    if(!b) jobs.push({ kind: 'create', id, doc });
-    else {
-      const ops = diff(b, doc, skipLocal);
+    if(!b) {
+      if(isAdmin || hasRegister) jobs.push({ kind: 'create', id, doc });
+    } else {
+      let ops = diff(b, doc, skipLocal);
+      if(!isAdmin){
+        // ログイン社員に権限のないフィールドグループの差分を除外
+        // （工程担当者が開始/完了を押した際に、部材明細(rows)や工事情報などの偽差分が混入してエラーになるのを防止）
+        if(!hasRegister){
+          ops = ops.filter(o => FIELD_GROUP[o.p[0]] !== 'info');
+        }
+        if(!hasRegister && !hasDelivery){
+          ops = ops.filter(o => FIELD_GROUP[o.p[0]] !== 'note');
+        }
+        if(!hasDelivery){
+          ops = ops.filter(o => FIELD_GROUP[o.p[0]] !== 'delivery');
+        }
+        if(!hasProg){
+          ops = ops.filter(o => FIELD_GROUP[o.p[0]] !== 'progress');
+        }
+        if(!hasPile){
+          ops = ops.filter(o => FIELD_GROUP[o.p[0]] !== 'piles');
+        }
+      }
       if(ops.length) jobs.push({ kind: 'update', id, ops, base: b });
     }
   }
-  for(const [id, b] of S.base.lists) if(!cur.has(id)) jobs.push({ kind: 'delete', id, base: b });
+  for(const [id, b] of S.base.lists){
+    if(!cur.has(id)){
+      if(isAdmin || Policy.canDeleteList(staff)) jobs.push({ kind: 'delete', id, base: b });
+    }
+  }
   if(!jobs.length) return;
 
   for(const j of jobs){
@@ -1062,6 +1086,41 @@ async function enter(){
    社員管理画面（管理者専用・タブ別チェックボックス設定）
    ==================================================================== */
 let STAFF_CACHE = [];
+const STAFF_OPEN_UIDS = new Set();
+
+window.toggleStaffRow = function(uid){
+  const body = document.getElementById('staffDetail_' + uid);
+  const icon = document.getElementById('staffToggleIcon_' + uid);
+  const btn = document.getElementById('staffToggleBtn_' + uid);
+  if(!body) return;
+  const isHidden = body.style.display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  if(icon) icon.textContent = isHidden ? '▼' : '▶';
+  if(btn) btn.textContent = isHidden ? '閉じる ▲' : '権限を編集 ▼';
+  if(isHidden) STAFF_OPEN_UIDS.add(uid); else STAFF_OPEN_UIDS.delete(uid);
+};
+
+window.expandAllStaff = function(open){
+  STAFF_CACHE.forEach(r => {
+    const body = document.getElementById('staffDetail_' + r.id);
+    const icon = document.getElementById('staffToggleIcon_' + r.id);
+    const btn = document.getElementById('staffToggleBtn_' + r.id);
+    if(body){
+      body.style.display = open ? 'block' : 'none';
+      if(icon) icon.textContent = open ? '▼' : '▶';
+      if(btn) btn.textContent = open ? '閉じる ▲' : '権限を編集 ▼';
+    }
+    if(open) STAFF_OPEN_UIDS.add(r.id); else STAFF_OPEN_UIDS.delete(r.id);
+  });
+};
+
+window.filterStaffList = function(q){
+  const term = String(q || '').trim().toLowerCase();
+  document.querySelectorAll('.staff-row').forEach(el => {
+    const hay = (el.dataset.search || '').toLowerCase();
+    el.style.display = (!term || hay.includes(term)) ? '' : 'none';
+  });
+};
 
 window.onStaffRoleChange = function(uid, newRole){
   const isAdmin = newRole === 'admin';
@@ -1099,8 +1158,20 @@ function renderStaffAdmin(docs){
    <button class="btn" type="button" id="stfAdd">社員情報を登録</button>
    <div class="help" id="stfMsg" style="margin-top:6px"></div>
   </div>
-  <div class="panel"><h2>登録済み社員一覧とタブ別権限設定（${rows.length}人 / 有効な管理者 ${adminsActive}人）</h2>
-    ${rows.map(r => staffRow(r, adminsActive)).join('') || '<div class="empty">登録されている社員がいません</div>'}
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;border-bottom:1px solid #e2e8f0;padding-bottom:10px">
+      <h2 style="margin:0;font-size:15px;font-weight:700;color:#0f172a">登録済み社員一覧とタブ別権限設定（${rows.length}人 / 有効な管理者 ${adminsActive}人）</h2>
+      <div style="display:flex;gap:6px">
+        <button type="button" class="btn small secondary" onclick="window.expandAllStaff(true)">すべて開く ▼</button>
+        <button type="button" class="btn small secondary" onclick="window.expandAllStaff(false)">すべて閉じる ▲</button>
+      </div>
+    </div>
+    <div style="margin-bottom:12px">
+      <input id="staffSearchInput" type="text" placeholder="🔍 社員名・社員ID・UIDで絞り込み検索（20人以上でもすぐ見つかります）..." style="padding:8px 12px;font-size:13px;width:100%;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc" oninput="window.filterStaffList(this.value)">
+    </div>
+    <div id="staffListContainer">
+      ${rows.map(r => staffRow(r, adminsActive)).join('') || '<div class="empty">登録されている社員がいません</div>'}
+    </div>
   </div>`;
 
   document.getElementById('stfAdd').onclick = addStaffRecord;
@@ -1112,6 +1183,25 @@ function staffRow(r, adminsActive){
   const d = r.data, self = r.id === S.uid;
   const isAdmin = d.role === 'admin';
   const allowed = d.allowedTabs || [];
+  const isOpen = STAFF_OPEN_UIDS.has(r.id);
+
+  // 担当工程・許可タブの概要ラベルチップ（閉じた状態でも一目で誰が何を担当しているかわかる）
+  let summaryBadges = '';
+  if(isAdmin){
+    summaryBadges = '<span style="font-size:11px;padding:2px 7px;background:#dbeafe;color:#1e40af;border-radius:4px;font-weight:700">全タブ許可</span>';
+  } else if(!allowed.length){
+    summaryBadges = '<span style="font-size:11px;padding:2px 7px;background:#fef3c7;color:#92400e;border-radius:4px">許可タブなし</span>';
+  } else {
+    const tabLabels = allowed.map(tid => {
+      const found = ALL_BUSINESS_TABS.find(t => t.id === tid);
+      return found ? found.label : tid;
+    });
+    const maxShow = 4;
+    const chips = tabLabels.slice(0, maxShow).join('・');
+    const extra = tabLabels.length > maxShow ? ` 他${tabLabels.length - maxShow}件` : '';
+    summaryBadges = `<span style="font-size:11px;padding:2px 7px;background:#dcfce7;color:#166534;border-radius:4px;font-weight:700">許可 ${allowed.length}タブ</span>
+      <span style="font-size:11px;color:#64748b;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(tabLabels.join(', '))}">（${esc(chips)}${extra}）</span>`;
+  }
 
   const tabsHtml = ALL_BUSINESS_TABS.map(t => {
     const checked = isAdmin || allowed.includes(t.id);
@@ -1123,55 +1213,72 @@ function staffRow(r, adminsActive){
     </label>`;
   }).join('');
 
-  return `<div class="staff-row ${d.active ? '' : 'off'}" data-uid="${esc(r.id)}" style="background:#fff;border:1px solid #cbd5e1;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05)">
-    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding-bottom:8px;margin-bottom:10px">
-      <div>
-        <b style="font-size:15px;color:#0f172a">${esc(d.staffId)}</b>　<span style="font-size:14px;color:#334155">${esc(d.name || '')}</span>
-        <span style="margin-left:8px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:${isAdmin ? '#eff6ff' : '#f1f5f9'};color:${isAdmin ? '#1d4ed8' : '#475569'};border:1px solid ${isAdmin ? '#bfdbfe' : '#cbd5e1'}">
+  const searchIndex = `${d.staffId || ''} ${d.name || ''} ${r.id} ${isAdmin ? '管理者 admin' : '一般社員 staff'} ${allowed.join(' ')}`;
+
+  return `<div class="staff-row ${d.active ? '' : 'off'}" data-uid="${esc(r.id)}" data-search="${esc(searchIndex)}" style="background:#fff;border:1px solid #cbd5e1;border-radius:10px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.04);overflow:hidden">
+    <!-- クリックで開閉できるヘッダー行（20人並んでも一覧でスッキリ見渡せる） -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;cursor:pointer;user-select:none;gap:10px;flex-wrap:wrap" onclick="window.toggleStaffRow('${esc(r.id)}')">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span id="staffToggleIcon_${esc(r.id)}" style="font-size:12px;color:#64748b;width:14px;display:inline-block">${isOpen ? '▼' : '▶'}</span>
+        <b style="font-size:15px;color:#0f172a">${esc(d.staffId)}</b>
+        <span style="font-size:14px;color:#334155;font-weight:600">${esc(d.name || '')}</span>
+        <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:${isAdmin ? '#eff6ff' : '#f1f5f9'};color:${isAdmin ? '#1d4ed8' : '#475569'};border:1px solid ${isAdmin ? '#bfdbfe' : '#cbd5e1'}">
           ${isAdmin ? '管理者' : '一般社員'}
         </span>
-        <code style="font-size:11px;color:#94a3b8;margin-left:6px">UID: ${esc(r.id)}</code>
+        <span style="font-size:12px;color:${d.active ? '#059669' : '#dc2626'};font-weight:700">
+          ${d.active ? '● 有効' : '× 無効'}${self ? '（ログイン中）' : ''}
+        </span>
+        ${summaryBadges}
       </div>
-      <span style="font-size:12px;color:${d.active ? '#059669' : '#dc2626'};font-weight:700">${d.active ? '有効' : '無効（利用停止）'}${self ? '（ログイン中）' : ''}</span>
+      <button id="staffToggleBtn_${esc(r.id)}" type="button" class="btn small secondary" style="font-size:11px;padding:3px 9px;pointer-events:none">
+        ${isOpen ? '閉じる ▲' : '権限を編集 ▼'}
+      </button>
     </div>
-    ${self ? `<div class="help" style="color:#64748b">※ ログイン中の自分自身のアカウント権限は変更できません。</div>` : `
-      <div class="row" style="margin-top:6px;gap:12px">
-        <div class="field" style="flex:1"><label>権限ロール</label>
-          <select data-f="role" onchange="window.onStaffRoleChange('${esc(r.id)}', this.value)">
-            <option value="staff" ${!isAdmin ? 'selected' : ''}>一般社員（許可タブのみ利用）</option>
-            <option value="admin" ${isAdmin ? 'selected' : ''}>管理者（全機能・全タブ・社員管理）</option>
-          </select>
-        </div>
-        <div class="field" style="flex:1"><label>アカウント状態</label>
-          <select data-f="active">
-            <option value="1" ${d.active ? 'selected' : ''}>有効</option>
-            <option value="0" ${d.active ? '' : 'selected'}>無効（ログインしてもアクセス遮断）</option>
-          </select>
-        </div>
+
+    <!-- 開閉する権限設定フォーム部分 -->
+    <div id="staffDetail_${esc(r.id)}" style="display:${isOpen ? 'block' : 'none'};padding:14px;border-top:1px solid #e2e8f0;background:#fff">
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">
+        Firebase UID: <code style="font-size:11px;color:#64748b">${esc(r.id)}</code>
       </div>
-      <div style="margin:10px 0 6px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <label style="font-size:12px;font-weight:700;color:#334155">タブ別利用許可（閲覧・編集）：</label>
-          <span style="font-size:11px;color:#64748b">チェックあり＝閲覧・編集可能 ／ チェックなし＝アクセス不可（非表示）</span>
+      ${self ? `<div class="help" style="color:#64748b">※ ログイン中の自分自身のアカウント権限は変更できません。</div>` : `
+        <div class="row" style="margin-top:6px;gap:12px">
+          <div class="field" style="flex:1"><label>権限ロール</label>
+            <select data-f="role" onchange="window.onStaffRoleChange('${esc(r.id)}', this.value)">
+              <option value="staff" ${!isAdmin ? 'selected' : ''}>一般社員（許可タブのみ利用）</option>
+              <option value="admin" ${isAdmin ? 'selected' : ''}>管理者（全機能・全タブ・社員管理）</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1"><label>アカウント状態</label>
+            <select data-f="active">
+              <option value="1" ${d.active ? 'selected' : ''}>有効</option>
+              <option value="0" ${d.active ? '' : 'selected'}>無効（ログインしてもアクセス遮断）</option>
+            </select>
+          </div>
         </div>
-        <div id="tabGrid_${esc(r.id)}" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(170px, 1fr));gap:6px">
-          ${tabsHtml}
+        <div style="margin:10px 0 6px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label style="font-size:12px;font-weight:700;color:#334155">タブ別利用許可（閲覧・編集）：</label>
+            <span style="font-size:11px;color:#64748b">チェックあり＝閲覧・編集可能 ／ チェックなし＝アクセス不可（非表示）</span>
+          </div>
+          <div id="tabGrid_${esc(r.id)}" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(170px, 1fr));gap:6px">
+            ${tabsHtml}
+          </div>
+          <div id="adminTabNotice_${esc(r.id)}" style="${isAdmin ? 'display:block' : 'display:none'};margin-top:4px;font-size:11px;color:#2563eb;font-weight:600">
+            ※ 管理者はすべてのタブと機能が自動的に許可されます。
+          </div>
         </div>
-        <div id="adminTabNotice_${esc(r.id)}" style="${isAdmin ? 'display:block' : 'display:none'};margin-top:4px;font-size:11px;color:#2563eb;font-weight:600">
-          ※ 管理者はすべてのタブと機能が自動的に許可されます。
+        <div style="margin:8px 0;padding:8px 10px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:6px">
+          <label class="inline-check" style="display:inline-flex;gap:6px;align-items:center;font-size:12px;color:#334155">
+            <input type="checkbox" data-f="deleteList" ${d.actions && d.actions.deleteList ? 'checked' : ''}>
+            <span><b>リストの削除を許可</b>（「リスト登録」タブが許可されている場合のみ有効）</span>
+          </label>
         </div>
-      </div>
-      <div style="margin:8px 0;padding:8px 10px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:6px">
-        <label class="inline-check" style="display:inline-flex;gap:6px;align-items:center;font-size:12px;color:#334155">
-          <input type="checkbox" data-f="deleteList" ${d.actions && d.actions.deleteList ? 'checked' : ''}>
-          <span><b>リストの削除を許可</b>（「リスト登録」タブが許可されている場合のみ有効）</span>
-        </label>
-      </div>
-      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <button class="btn small" type="button" data-save="${esc(r.id)}">権限設定を保存</button>
-        <button class="btn small" type="button" data-del="${esc(r.id)}" style="background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5;cursor:pointer">🗑️ 社員を削除</button>
-      </div>
-    `}
+        <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <button class="btn small" type="button" data-save="${esc(r.id)}">権限設定を保存</button>
+          <button class="btn small" type="button" data-del="${esc(r.id)}" style="background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5;cursor:pointer">🗑️ 社員を削除</button>
+        </div>
+      `}
+    </div>
   </div>`;
 }
 
