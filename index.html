@@ -80,16 +80,29 @@ details{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin
 #deliveryPrintArea{display:none}
 @media print{
  body[data-print-mode="delivery"] #deliveryPrintArea{display:block!important;position:static!important;width:100%!important;color:#000!important;background:#fff!important;font-family:system-ui,"Noto Sans JP",sans-serif!important}
- #deliveryPrintArea h1{font-size:13pt;margin:0 0 2mm;text-align:center}
- #deliveryPrintArea .print-meta{font-size:8.5pt;margin:0 0 2mm;text-align:right}
- #deliveryPrintArea table{width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:auto!important;font-size:8.5pt!important;line-height:1.25!important}
- #deliveryPrintArea th,#deliveryPrintArea td{border:0.2mm solid #555!important;padding:0.8mm 1mm!important;vertical-align:top!important;white-space:normal!important;word-break:break-all;font-size:8.5pt!important}
- #deliveryPrintArea th{background:#e8e8e8!important;position:static!important;color:#000!important;white-space:normal!important;word-break:keep-all!important}
+ #deliveryPrintArea h1{font-size:12pt;margin:0 0 1.5mm;text-align:center}
+ #deliveryPrintArea .print-meta{font-size:7.5pt;margin:0 0 1.5mm;text-align:right}
+ #deliveryPrintArea table{width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:fixed!important;font-size:7.5pt!important;line-height:1.2!important}
+ #deliveryPrintArea th,#deliveryPrintArea td{border:0.2mm solid #555!important;padding:0.7mm 0.8mm!important;vertical-align:top!important;white-space:normal!important;word-break:break-all;overflow-wrap:anywhere;font-size:7.5pt!important}
+ #deliveryPrintArea th{background:#e8e8e8!important;position:static!important;color:#000!important;word-break:keep-all!important;overflow-wrap:normal}
  #deliveryPrintArea tr{break-inside:avoid!important;page-break-inside:avoid!important}
- #deliveryPrintArea td:nth-child(1),#deliveryPrintArea td:nth-child(2),#deliveryPrintArea td:nth-child(6),#deliveryPrintArea td:nth-child(7),#deliveryPrintArea td:nth-child(8),#deliveryPrintArea td:nth-child(10),#deliveryPrintArea td:nth-child(11){white-space:nowrap!important;word-break:keep-all!important}
+ #deliveryPrintArea th:nth-child(1){width:5.5%}
+ #deliveryPrintArea th:nth-child(2){width:5.5%}
+ #deliveryPrintArea th:nth-child(3){width:8%}
+ #deliveryPrintArea th:nth-child(4){width:16%}
+ #deliveryPrintArea th:nth-child(5){width:10%}
+ #deliveryPrintArea th:nth-child(6){width:5.5%}
+ #deliveryPrintArea th:nth-child(7){width:4.5%;text-align:right}
+ #deliveryPrintArea th:nth-child(8){width:6.5%;text-align:right}
+ #deliveryPrintArea th:nth-child(9){width:5.5%}
+ #deliveryPrintArea th:nth-child(10){width:6%}
+ #deliveryPrintArea th:nth-child(11){width:6%}
+ #deliveryPrintArea th:nth-child(12){width:13.5%}
+ #deliveryPrintArea th:nth-child(13){width:7.5%}
+ #deliveryPrintArea td:nth-child(7),#deliveryPrintArea td:nth-child(8){text-align:right;white-space:nowrap!important;word-break:keep-all!important}
+ #deliveryPrintArea td:nth-child(1),#deliveryPrintArea td:nth-child(2),#deliveryPrintArea td:nth-child(9){white-space:nowrap!important;word-break:keep-all!important}
  #deliveryPrintArea .proc-col{white-space:normal!important;word-break:keep-all!important}
- #deliveryPrintArea .proc-col .pp{display:inline-block;white-space:nowrap;margin-right:4px}
- #deliveryPrintArea .note-col{width:16%!important;max-width:16%!important;word-break:break-all!important;overflow-wrap:anywhere}
+ #deliveryPrintArea .proc-col .pp{display:inline-block;white-space:nowrap;margin-right:3px}
 }
 
 /* ===== 工程タブ コンパクト表示（10件以上をスクロールなしで表示） ===== */
@@ -1087,7 +1100,7 @@ $("deliverySearchBtn").onclick=renderDeliverySearch;["deliveryStart","deliveryEn
 /* 印刷の向きを一時的に切り替える（空文字なら既定のまま） */
 function setPrintPage(size){let st=document.getElementById("printPageStyle");if(!size){st&&st.remove();return}if(!st){st=document.createElement("style");st.id="printPageStyle";document.head.appendChild(st)}st.textContent=`@page{size:${size};margin:10mm}`}
 function deliveryPrintEntries(){return deliveryEntries()}
-function printDelivery(){const entries=deliveryPrintEntries();const rows=entries.map(x=>{if(x.memo!==undefined)return `<tr><td colspan="13"><b>${esc(x.memo)}</b></td></tr>`;const isList=x.type==="list";return `<tr><td>${esc(x.dateLabel||x.date||"")}</td><td>${esc(isList?x.serial:(x.serial||""))}</td><td>${esc(x.customer||"")}</td><td>${esc(x.job||"")}</td><td>${esc(x.destination||"")}</td><td>${isList?esc(x.cut||""):""}</td><td>${isList?fmt(x.qty)+" 枚":""}</td><td>${isList?fmt(x.weight)+" kg":""}</td><td>${isList?esc(x.maxSize):""}</td><td>${esc(x.slip||"")}</td><td>${esc(x.sales||"")}</td><td class="note-col">${esc(x.note||"")}</td><td class="proc-col">${isList?(x.procPrint||"－"):"－"}</td></tr>`}).join("");let area=document.getElementById("deliveryPrintArea");if(!area){area=document.createElement("div");area.id="deliveryPrintArea";document.body.appendChild(area)}area.innerHTML=`<h1>配達表</h1><div class="print-meta">印刷日：${new Date().toLocaleDateString("ja-JP")}　件数：${entries.length}件</div><table><thead><tr><th>納期・日付</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先・訪問先</th><th>切断方法</th><th>枚数</th><th>角重量</th><th>最大サイズ</th><th>伝票番号</th><th>売上番号</th><th class="note-col">備考</th><th class="proc-col">工程</th></tr></thead><tbody>${rows||'<tr><td colspan="13">対象データはありません</td></tr>'}</tbody></table>`;setPrintPage("A4 landscape");document.body.dataset.printMode="delivery";document.title="配達表";window.print()}
+function printDelivery(){const entries=deliveryPrintEntries();const rows=entries.map(x=>{if(x.memo!==undefined)return `<tr><td colspan="13"><b>${esc(x.memo)}</b></td></tr>`;const isList=x.type==="list";const maxs=isList?String(x.maxSize||"－").replace(/^最大サイズ\s*/,""):"";return `<tr><td>${esc(x.dateLabel||x.date||"")}</td><td>${esc(isList?x.serial:(x.serial||""))}</td><td>${esc(x.customer||"")}</td><td>${esc(x.job||"")}</td><td>${esc(x.destination||"")}</td><td>${isList?esc(x.cut||""):""}</td><td>${isList?fmt(x.qty)+" 枚":""}</td><td>${isList?fmt(x.weight)+" kg":""}</td><td>${esc(maxs)}</td><td>${esc(x.slip||"")}</td><td>${esc(x.sales||"")}</td><td class="note-col">${esc(x.note||"")}</td><td class="proc-col">${isList?(x.procPrint||"－"):"－"}</td></tr>`}).join("");let area=document.getElementById("deliveryPrintArea");if(!area){area=document.createElement("div");area.id="deliveryPrintArea";document.body.appendChild(area)}area.innerHTML=`<h1>配達表</h1><div class="print-meta">印刷日：${new Date().toLocaleDateString("ja-JP")}　件数：${entries.length}件</div><table><thead><tr><th>納期・日付</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先・訪問先</th><th>切断方法</th><th>枚数</th><th>角重量</th><th>最大サイズ</th><th>伝票番号</th><th>売上番号</th><th class="note-col">備考</th><th class="proc-col">工程</th></tr></thead><tbody>${rows||'<tr><td colspan="13">対象データはありません</td></tr>'}</tbody></table>`;setPrintPage("A4 landscape");document.body.dataset.printMode="delivery";document.title="配達表";window.print()}
 window.printDelivery=printDelivery;const BASE_TITLE="生産管理システム | 生産・配送管理";window.addEventListener("afterprint",()=>{setPrintPage("");delete document.body.dataset.printMode;document.title=BASE_TITLE});
 $("printDeliveryBtn").onclick=printDelivery;
 $("dashFilter").onchange=renderDash;$("dashSearch").oninput=renderDash;$("planRefresh").onclick=renderPlan;
