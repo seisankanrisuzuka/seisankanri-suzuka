@@ -51,7 +51,7 @@ details{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin
 }
 
 #stagePrintArea{display:none}
-@page{size:A3 portrait;margin:5mm}
+@page{size:A3 portrait;margin:10mm}
 @media print{
  body>*{display:none!important}
  body[data-print-mode="stage"] #stagePrintArea{display:block!important;position:static!important;width:100%!important;color:#000!important;background:#fff!important;font-family:system-ui,"Noto Sans JP",sans-serif!important}
@@ -80,18 +80,16 @@ details{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin
 #deliveryPrintArea{display:none}
 @media print{
  body[data-print-mode="delivery"] #deliveryPrintArea{display:block!important;position:static!important;width:100%!important;color:#000!important;background:#fff!important;font-family:system-ui,"Noto Sans JP",sans-serif!important}
- #deliveryPrintArea h1{font-size:13pt;margin:0 0 2mm;text-align:center}
- #deliveryPrintArea .print-meta{font-size:8pt;margin:0 0 2mm;text-align:right}
- #deliveryPrintArea table{width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:auto!important;font-size:8pt!important;line-height:1.25!important}
- #deliveryPrintArea th,#deliveryPrintArea td{border:0.2mm solid #555!important;padding:0.8mm 1mm!important;vertical-align:top!important;white-space:normal!important;word-break:break-all}
- #deliveryPrintArea th{background:#e8e8e8!important;position:static!important;color:#000!important}
+ #deliveryPrintArea h1{font-size:26pt;margin:0 0 3mm;text-align:center}
+ #deliveryPrintArea .print-meta{font-size:16pt;margin:0 0 3mm;text-align:right}
+ #deliveryPrintArea table{width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:auto!important;font-size:15pt!important;line-height:1.25!important}
+ #deliveryPrintArea th,#deliveryPrintArea td{border:0.2mm solid #555!important;padding:1.2mm 1.5mm!important;vertical-align:top!important;white-space:normal!important;word-break:break-all}
+ #deliveryPrintArea th{background:#e8e8e8!important;position:static!important;color:#000!important;white-space:normal!important;word-break:keep-all!important}
  #deliveryPrintArea tr{break-inside:avoid!important;page-break-inside:avoid!important}
- #deliveryPrintArea th{white-space:nowrap!important}
- #deliveryPrintArea td:nth-child(1),#deliveryPrintArea td:nth-child(2),#deliveryPrintArea td:nth-child(6),#deliveryPrintArea td:nth-child(7),#deliveryPrintArea td:nth-child(8),#deliveryPrintArea td:nth-child(9),#deliveryPrintArea td:nth-child(10),#deliveryPrintArea td:nth-child(11){white-space:nowrap!important;word-break:keep-all!important}
- #deliveryPrintArea table{font-size:7.5pt!important}
- #deliveryPrintArea .proc-col{width:9%!important;white-space:nowrap!important;word-break:keep-all!important}
- #deliveryPrintArea .proc-col .pp{display:inline-block;white-space:nowrap;margin-right:3px}
- #deliveryPrintArea .note-col{width:19%!important;max-width:19%!important;word-break:break-all!important;overflow-wrap:anywhere}
+ #deliveryPrintArea td:nth-child(1),#deliveryPrintArea td:nth-child(2),#deliveryPrintArea td:nth-child(6),#deliveryPrintArea td:nth-child(7),#deliveryPrintArea td:nth-child(8),#deliveryPrintArea td:nth-child(10),#deliveryPrintArea td:nth-child(11){white-space:nowrap!important;word-break:keep-all!important}
+ #deliveryPrintArea .proc-col{white-space:normal!important;word-break:keep-all!important}
+ #deliveryPrintArea .proc-col .pp{display:inline-block;white-space:nowrap;margin-right:4px}
+ #deliveryPrintArea .note-col{width:16%!important;max-width:16%!important;word-break:break-all!important;overflow-wrap:anywhere}
 }
 
 /* ===== 工程タブ コンパクト表示（10件以上をスクロールなしで表示） ===== */
@@ -656,11 +654,32 @@ function printProcessList(l){if(l.fullyOutsourced)return"全工程外注";const 
 const SHOW_ARCH_KEY="factory_link_show_archived_v1";let showArchived=false;try{showArchived=localStorage.getItem(SHOW_ARCH_KEY)==="1"}catch(e){}
 /* 工程の完了日（完了ボタンで入力。未入力の古いデータは、完了を押した日時から補う） */
 function doneDateOf(l,p){const v=l.processDoneDates?.[p];if(v)return v;const iso=l.processCompleted?.[p];if(!iso)return "";const d=new Date(iso);return isNaN(d)?"":`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function applyPilesToList(l,count){
+ l.pileItems=l.pileItems||[];
+ if(count<l.pileItems.length){
+  const removed=l.pileItems.slice(count);
+  if(removed.some(p=>p.loaded||(p.history||[]).length)){
+   if(!confirm("減らす対象の山に積み込み履歴があります。履歴を残すため、その山は削除せず『山数変更後の履歴』として保持します。続けますか？"))return false;
+   l.piles=count;
+   l.pileItems.forEach((p,i)=>{p.retired=i>=count});
+  }else{
+   l.pileItems=l.pileItems.slice(0,count);
+   l.piles=count;
+  }
+ }else{
+  for(let i=l.pileItems.length+1;i<=count;i++)l.pileItems.push({id:`${l.serial}-${i}`,serial:l.serial,no:i,loaded:false,history:[]});
+  l.piles=count;
+ }
+ return true;
+}
+function needsPileInStage(l,process){const p=normalizeProcessName(process);return !!(l&&(l.processes||[]).length&&allDone(l)&&l.piles==null&&lastDoneProcess(l)===p)}
 function askDoneDate(serial,process,cb){const l=lists.find(x=>String(x.serial)===String(serial));if(!l)return;const p=normalizeProcessName(process);const cur=doneDateOf(l,p)||todayStr();
+ const reqProcs=(l.processes||[]).map(normalizeProcessName);
+ const willAllDone=reqProcs.length>0&&reqProcs.every(pr=>pr===p||processDone(l,pr));
  document.getElementById("doneDateModal")?.remove();const m=document.createElement("div");m.id="doneDateModal";m.className="done-modal-back";
- m.innerHTML=`<div class="done-modal-card" role="dialog" aria-modal="true"><h3>${esc(p==="キリ"?"キリ穴":p)}工程の完了日</h3><p class="help" style="margin:0 0 10px">${esc(l.serial)} ／ ${esc(l.job||"")}</p><input id="doneDateInput" type="date" value="${esc(cur)}"><div class="done-modal-btns"><button class="btn" id="doneDateOk" type="button">完了にする</button><button class="btn secondary" id="doneDateCancel" type="button">キャンセル</button></div></div>`;
+ m.innerHTML=`<div class="done-modal-card" role="dialog" aria-modal="true"><h3>${esc(p==="キリ"?"キリ穴":p)}工程の完了日</h3><p class="help" style="margin:0 0 10px">${esc(l.serial)} ／ ${esc(l.job||"")}</p><label style="margin-bottom:4px">完了日</label><input id="doneDateInput" type="date" value="${esc(cur)}">${willAllDone?`<div style="margin-top:12px;padding:10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px"><label for="donePileInput" style="color:#166534;margin-bottom:4px">完成山数（全工程完了のため同時登録できます）</label><input id="donePileInput" type="number" min="0" step="1" value="${esc(l.piles??"")}" placeholder="山数（後で登録する場合は空欄可）"><p class="help" style="margin:6px 0 0;font-size:11px;color:#166534">※空欄のまま「完了にする」を押しても、山数を登録するまで一覧に残ります。</p></div>`:""}<div class="done-modal-btns"><button class="btn" id="doneDateOk" type="button">完了にする</button><button class="btn secondary" id="doneDateCancel" type="button">キャンセル</button></div></div>`;
  document.body.appendChild(m);const close=()=>m.remove();
- document.getElementById("doneDateOk").onclick=()=>{const v=document.getElementById("doneDateInput").value;if(!v){alert("完了日を入力してください");return}close();cb(v)};
+ document.getElementById("doneDateOk").onclick=()=>{const v=document.getElementById("doneDateInput").value;if(!v){alert("完了日を入力してください");return}let pileCount=null;const pe=document.getElementById("donePileInput");if(pe){const pv=String(pe.value||"").trim();if(pv!==""){const pc=Number(pv);if(!Number.isFinite(pc)||pc<0||!Number.isInteger(pc)){alert("0以上の整数で完成山数を入力してください");pe.focus();return}pileCount=pc}}close();cb(v,pileCount)};
  document.getElementById("doneDateCancel").onclick=close;m.addEventListener("click",e=>{if(e.target===m)close()});m.addEventListener("keydown",e=>{if(e.key==="Escape")close();if(e.key==="Enter")document.getElementById("doneDateOk").click()});document.getElementById("doneDateInput").focus()}
 function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function dayOfAt(at){const m=String(at||"").match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);return m?`${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`:""}
@@ -813,7 +832,7 @@ function resetStageOrder(process){let active=lists.filter(l=>(l.processes||[]).m
 function addStageMemo(process){let text=prompt("工程表に挿入するメモを入力してください");if(text===null)return;stageBoard[process]=stageBoard[process]||[];stageBoard[process].push({type:"memo",id:"M"+Date.now()+Math.floor(Math.random()*1000),text});persistStageBoard();renderStages()}
 function deleteStageMemo(process,id){if(!confirm("このメモを削除しますか？"))return;stageBoard[process]=(stageBoard[process]||[]).filter(x=>!(x&&x.type==="memo"&&x.id===id));persistStageBoard();renderStages()}
 function updateStageMemo(process,id,text){let x=(stageBoard[process]||[]).find(x=>x.id===id);if(x){x.text=text;persistStageBoard()}}
-function setProcessStatus(serial,process,status,doneDate){
+function setProcessStatus(serial,process,status,doneDate,pileCount){
  const l=lists.find(x=>String(x.serial)===String(serial));
  const p=normalizeProcessName(process);
  if(!l||!(l.processes||[]).map(normalizeProcessName).includes(p)){alert("対象の工事または工程が見つかりません");return}
@@ -826,7 +845,13 @@ function setProcessStatus(serial,process,status,doneDate){
  if(status==="started")l.processStarted[p]=new Date().toISOString();
  else delete l.processStarted[p];
  l.processDoneDates=l.processDoneDates&&typeof l.processDoneDates==="object"?l.processDoneDates:{};
- if(status==="done"){l.processCompleted[p]=new Date().toISOString();l.processDoneDates[p]=doneDate||todayStr()}
+ if(status==="done"){
+  l.processCompleted[p]=new Date().toISOString();
+  l.processDoneDates[p]=doneDate||todayStr();
+  if(pileCount!==null&&pileCount!==undefined&&canRegisterPiles(l)){
+   applyPilesToList(l,pileCount);
+  }
+ }
  else{delete l.processCompleted[p];delete l.processDoneDates[p]}
  save();
 }
@@ -837,7 +862,7 @@ if(!window.__processStatusClickBound){
   const button=e.target&&e.target.closest?e.target.closest("button[data-process-status]"):null;
   if(!button)return;
   e.preventDefault();e.stopPropagation();
-  if(button.dataset.status==="done"){const sv=button.dataset.serial,pr=button.dataset.process;askDoneDate(sv,pr,d=>setProcessStatus(sv,pr,"done",d))}else setProcessStatus(button.dataset.serial,button.dataset.process,button.dataset.status);
+  if(button.dataset.status==="done"){const sv=button.dataset.serial,pr=button.dataset.process;askDoneDate(sv,pr,(d,pc)=>setProcessStatus(sv,pr,"done",d,pc))}else setProcessStatus(button.dataset.serial,button.dataset.process,button.dataset.status);
  });
  window.__processStatusClickBound=true;
 }
@@ -879,9 +904,9 @@ window.setProcessNote=(serial,process,val)=>{if(!canEditNotes())return;const l=l
 function stageTableHtml(process,key,group){
  const ce=canEditNotes();
  const entries=stageEntries(process,group);
- const visibleEntries=entries.filter(x=>x.type==="memo"||((!stageExcludeDone[process]||(x.l&&(x.l.processStatus?.[process]||"pending")!=="done"))&&x.l&&stageFilterOk(process,x.l)));
+ const visibleEntries=entries.filter(x=>x.type==="memo"||(x.l&&(!stageExcludeDone[process]||(x.l.processStatus?.[process]||"pending")!=="done"||needsPileInStage(x.l,process))&&stageFilterOk(process,x.l)));
  let stageNo=0;
- const rows=visibleEntries.map((x)=>{const i=x.index;if(x.type==="memo")return `<tr class="memo-row" ${ce?`draggable="true" ondragstart="stageDragStart(event,'${key}',${i})" ondragover="event.preventDefault()" ondrop="stageDrop(event,'${key}',${i})"`:""}><td>${ce?`<div class="move-buttons"><button class="btn small secondary" onclick="moveStageEntry('${key}',${i},-1)">↑</button><button class="btn small secondary" onclick="moveStageEntry('${key}',${i},1)">↓</button></div>`:""}</td><td colspan="${process==="キリ"?11:process==="開先"?10:9}"><div class="memo-flex"><b>メモ</b><input class="inline-edit" value="${esc(x.text||"")}" ${ce?`onchange="updateStageMemo('${key}','${x.id}',this.value)" placeholder="例：ここからここまでは先行加工"`:`readonly tabindex="-1"`}>${ce?`<button class="btn small secondary" style="color:#b91c1c" onclick="deleteStageMemo('${key}','${x.id}')">削除</button>`:""}</div></td></tr>`;const l=x.l;const st=l.processStatus?.[process]||"pending";return `<tr class="stage-row ${st==="done"?"stage-completed":""}" data-stage-index="${i}" ondragover="event.preventDefault()" ondrop="stageDrop(event,'${key}',${i})"><td class="st-no">${++stageNo}</td><td class="st-due">${esc(dueLabel(l))}</td><td class="st-wd">${esc(shortDate(l.processDates?.[process])||"－")}</td><td class="st-info" title="${esc([l.customer,l.job,l.destination].filter(Boolean).join(" / "))}"><span class="ci">${esc(l.customer||"")}</span><span class="ci">${esc(l.job||"")}</span><span class="ci">${esc(l.destination||"")}</span></td><td><b>${esc(l.serial)}</b></td><td>${fmt(total(l,"qty"))} 枚</td><td>${fmt(total(l,"weight"))} kg</td><td class="st-cut">${esc(cutLabel(l))}</td>${process==="開先"?`<td class="st-thk">${thkChips(l)}</td>`:""}${process==="キリ"?`<td>${fmt(l.holeCount||0)} 穴</td><td>${esc((l.holeDiameters||[]).join(", ")||"－")}</td>`:""}<td class="st-note ${(l.processNotes?.[process]||"")?"":"empty"}"><input class="inline-edit" value="${esc(l.processNotes?.[process]||"")}" ${ce?`placeholder="備考" onchange="setProcessNote('${esc(l.serial)}','${process}',this.value)"`:`readonly tabindex="-1"`}></td><td><span class="badge ${st==="done"?"green":st==="started"?"blue":"yellow"}">${processState(st)}</span>${processStateButtons(l.serial,process,st)}${(allDone(l) && lastDoneProcess(l)===process)?`<div style="margin-top:6px;padding:6px;border:1px solid #86efac;border-radius:8px;background:#f0fdf4"><b style="font-size:11px;color:#166534">🎉 全工程完了：完成山数登録</b>${pileCellHtml(l,"stage-"+process)}</div>`:(l.piles!=null?`<div style="margin-top:6px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;font-size:11px"><b>登録済山数:</b> ${fmt(l.piles)}山</div>`:"")}<details><summary>部品明細 ${(l.rows||[]).length}行</summary><div class="help">${(l.rows||[]).map(r=>`${esc(r.name)} × ${fmt(r.qty)}（角重量 ${fmt(r.angleWeight)}）`).join("<br>")}</div></details></td></tr>`}).join("");
+ const rows=visibleEntries.map((x)=>{const i=x.index;if(x.type==="memo")return `<tr class="memo-row" ${ce?`draggable="true" ondragstart="stageDragStart(event,'${key}',${i})" ondragover="event.preventDefault()" ondrop="stageDrop(event,'${key}',${i})"`:""}><td>${ce?`<div class="move-buttons"><button class="btn small secondary" onclick="moveStageEntry('${key}',${i},-1)">↑</button><button class="btn small secondary" onclick="moveStageEntry('${key}',${i},1)">↓</button></div>`:""}</td><td colspan="${process==="キリ"?11:process==="開先"?10:9}"><div class="memo-flex"><b>メモ</b><input class="inline-edit" value="${esc(x.text||"")}" ${ce?`onchange="updateStageMemo('${key}','${x.id}',this.value)" placeholder="例：ここからここまでは先行加工"`:`readonly tabindex="-1"`}>${ce?`<button class="btn small secondary" style="color:#b91c1c" onclick="deleteStageMemo('${key}','${x.id}')">削除</button>`:""}</div></td></tr>`;const l=x.l;const st=l.processStatus?.[process]||"pending";const waitPile=stageExcludeDone[process]&&st==="done"&&needsPileInStage(l,process);return `<tr class="stage-row ${st==="done"?"stage-completed":""}" data-stage-index="${i}" ondragover="event.preventDefault()" ondrop="stageDrop(event,'${key}',${i})"><td class="st-no">${++stageNo}</td><td class="st-due">${esc(dueLabel(l))}</td><td class="st-wd">${esc(shortDate(l.processDates?.[process])||"－")}</td><td class="st-info" title="${esc([l.customer,l.job,l.destination].filter(Boolean).join(" / "))}"><span class="ci">${esc(l.customer||"")}</span><span class="ci">${esc(l.job||"")}</span><span class="ci">${esc(l.destination||"")}</span></td><td><b>${esc(l.serial)}</b></td><td>${fmt(total(l,"qty"))} 枚</td><td>${fmt(total(l,"weight"))} kg</td><td class="st-cut">${esc(cutLabel(l))}</td>${process==="開先"?`<td class="st-thk">${thkChips(l)}</td>`:""}${process==="キリ"?`<td>${fmt(l.holeCount||0)} 穴</td><td>${esc((l.holeDiameters||[]).join(", ")||"－")}</td>`:""}<td class="st-note ${(l.processNotes?.[process]||"")?"":"empty"}"><input class="inline-edit" value="${esc(l.processNotes?.[process]||"")}" ${ce?`placeholder="備考" onchange="setProcessNote('${esc(l.serial)}','${process}',this.value)"`:`readonly tabindex="-1"`}></td><td><span class="badge ${st==="done"?"green":st==="started"?"blue":"yellow"}">${processState(st)}</span>${processStateButtons(l.serial,process,st)}${(allDone(l) && lastDoneProcess(l)===process)?`<div style="margin-top:6px;padding:6px;border:1px solid ${waitPile?"#f59e0b":"#86efac"};border-radius:8px;background:${waitPile?"#fffbeb":"#f0fdf4"}"><b style="font-size:11px;color:${waitPile?"#b45309":"#166534"}">${waitPile?"山数未登録（登録すると完了として非表示になります）":"全工程完了：完成山数登録"}</b>${pileCellHtml(l,"stage-"+process)}</div>`:(l.piles!=null?`<div style="margin-top:6px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;font-size:11px"><b>登録済山数:</b> ${fmt(l.piles)}山</div>`:"")}<details><summary>部品明細 ${(l.rows||[]).length}行</summary><div class="help">${(l.rows||[]).map(r=>`${esc(r.name)} × ${fmt(r.qty)}（角重量 ${fmt(r.angleWeight)}）`).join("<br>")}</div></details></td></tr>`}).join("");
  const listCount=visibleEntries.filter(x=>x.type==="list").length,hasMemo=visibleEntries.some(x=>x.type==="memo");
  const html=rows?`${stageDaySummaryHtml(process,visibleEntries.filter(x=>x.type==="list").map(x=>x.l))}<table><thead><tr><th>No.</th><th>納期</th><th>作業日</th><th>需要家 / 工事名 / 納入先</th><th>工程番号</th><th>総枚数</th><th>総角重量</th><th>切断方法</th>${process==="開先"?"<th>板厚</th>":""}${process==="キリ"?"<th>穴数</th><th>穴径(mm)</th>":""}<th>備考</th><th>工程状態</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">対象リストはありません</div>';
  return {html,listCount,hasMemo}
@@ -1012,7 +1037,7 @@ $("exportCsvClearBtn").addEventListener("click",()=>{$("exportDueStart").value="
 updateExportCsvCount();
 window.setWorkDate=(s,p,date)=>{let l=lists.find(x=>x.serial===s);if(!l)return;if(!(l.processes||[]).includes(p)){alert("この工事リストは対象工程ではありません。");return;}l.processDates=l.processDates||{};l.processDates[p]=date;save()};
 window.setProcess=(s,p,action)=>{let l=lists.find(x=>String(x.serial)===String(s));p=normalizeProcessName(p);if(!l)return;if(!(l.processes||[]).map(normalizeProcessName).includes(p)){alert("この工事リストは対象工程ではありません。");return;}if(!applyProcessAction(l,p,action))return;save()};
-window.savePiles=(s,inputId)=>{let l=lists.find(x=>x.serial===s),fromDetail=!inputId,v=$(inputId||"pileInput")?.value;if(!l||v===undefined||v===""||num(v)<0||!Number.isInteger(num(v))){alert("0以上の整数で完成山数を入力してください");return}if(!canRegisterPiles(l)){const pending=(l.processes||[]).filter(p=>!processDone(l,p)).map(p=>`${p}(${l.processStatus?.[p]==='started'?'作業中':'未開始'})`).join('、');alert(`【山数を登録できません】\nまだ完了していない工程があります：\n${pending}\n\n※工程飛ばし・加工漏れを防止するため、全工程が完了するまで山数は登録できません。`);return}l.pileItems=l.pileItems||[];const count=num(v);if(count<l.pileItems.length){const removed=l.pileItems.slice(count);if(removed.some(p=>p.loaded||(p.history||[]).length)){if(!confirm("減らす対象の山に積み込み履歴があります。履歴を残すため、その山は削除せず『山数変更後の履歴』として保持します。続けますか？"))return;l.piles=count;l.pileItems.forEach((p,i)=>{p.retired=i>=count});}else{l.pileItems=l.pileItems.slice(0,count);l.piles=count}}else{for(let i=l.pileItems.length+1;i<=count;i++)l.pileItems.push({id:`${l.serial}-${i}`,serial:l.serial,no:i,loaded:false,history:[]});l.piles=count}save();alert(`${s} の完成山数を ${count}山 に登録・保存しました。積み込みタブに山IDが反映されます。`)};
+window.savePiles=(s,inputId)=>{let l=lists.find(x=>x.serial===s),fromDetail=!inputId,v=$(inputId||"pileInput")?.value;if(!l||v===undefined||v===""||num(v)<0||!Number.isInteger(num(v))){alert("0以上の整数で完成山数を入力してください");return}if(!canRegisterPiles(l)){const pending=(l.processes||[]).filter(p=>!processDone(l,p)).map(p=>`${p}(${l.processStatus?.[p]==='started'?'作業中':'未開始'})`).join('、');alert(`【山数を登録できません】\nまだ完了していない工程があります：\n${pending}\n\n※工程飛ばし・加工漏れを防止するため、全工程が完了するまで山数は登録できません。`);return}const count=num(v);if(!applyPilesToList(l,count))return;save();alert(`${s} の完成山数を ${count}山 に登録・保存しました。積み込みタブに山IDが反映されます。`)};
 window.editPiles=s=>{document.querySelector('nav button[data-page="production"]').click();setTimeout(()=>{const el=document.getElementById("pileInput-prod-"+s);if(el)el.focus()},0)}; window.togglePile=(s,id,checked)=>{let l=lists.find(x=>x.serial===s),p=l?.pileItems?.find(x=>x.id===id);if(!l||!p)return;p._selected=checked;renderLoad()};
 window.applyPileChecks=s=>{let l=lists.find(x=>x.serial===s);if(!l)return;if((l.processes||[]).length&&!allDone(l)){const pending=(l.processes||[]).filter(p=>!processDone(l,p)).join('・');alert(`【積込できません】\nまだ完了していない工程があります：\n${pending}\n\n※加工漏れ・出荷ミス防止のため、全工程が完了するまで積み込めません。`);return}let driver=$("driver-"+s)?.value.trim();if(!driver){alert("積込担当者名を入力してください");return}let selected=(l.pileItems||[]).filter(p=>p._selected);if(!selected.length){alert("積み込む山にチェックを入れてください");return}if(selected.some(p=>p.loaded)){alert("積込済みの山が選択されています。二重登録はできません");return}const at=new Date().toLocaleString("ja-JP");selected.forEach(p=>{p.loaded=true;p._selected=false;p.history=p.history||[];p.history.push({driver,at})});l.loads=l.loads||[];l.loads.push({piles:selected.length,driver,at,pileIds:selected.map(p=>p.id)});save()};
 window.deliverList=s=>{let l=lists.find(x=>x.serial===s);if(!l)return;if((l.pileItems||[]).some(p=>!p.loaded&&!p.retired)){alert("未積込の山が残っています。すべて積み込んでから配送完了にしてください。");return}if(!confirm(`${s} を配送完了にしますか？`))return;l.delivered=true;l.deliveredAt=new Date().toLocaleString("ja-JP");save()};
@@ -1051,7 +1076,7 @@ function renderDeliverySearch(){const start=$("deliveryStart").value,end=$("deli
 $("deliverySearchBtn").onclick=renderDeliverySearch;["deliveryStart","deliveryEnd","deliveryMethodSearch","deliveryJobSearch","deliveryDestSearch"].forEach(id=>$(id).addEventListener("input",renderDeliverySearch));$("deliverySearchClear").onclick=()=>{["deliveryStart","deliveryEnd","deliveryJobSearch","deliveryDestSearch"].forEach(id=>$(id).value="");$("deliveryMethodSearch").value="";renderDeliverySearch()};
 /* 配達表専用の印刷：キリ穴など工程印刷（#stagePrintArea）とは別の領域・別の処理を使う */
 /* 印刷の向きを一時的に切り替える（空文字なら既定のまま） */
-function setPrintPage(size){let st=document.getElementById("printPageStyle");if(!size){st&&st.remove();return}if(!st){st=document.createElement("style");st.id="printPageStyle";document.head.appendChild(st)}st.textContent=`@page{size:${size};margin:5mm}`}
+function setPrintPage(size){let st=document.getElementById("printPageStyle");if(!size){st&&st.remove();return}if(!st){st=document.createElement("style");st.id="printPageStyle";document.head.appendChild(st)}st.textContent=`@page{size:${size};margin:10mm}`}
 function deliveryPrintEntries(){return deliveryEntries()}
 function printDelivery(){const entries=deliveryPrintEntries();const rows=entries.map(x=>{if(x.memo!==undefined)return `<tr><td colspan="13"><b>${esc(x.memo)}</b></td></tr>`;const isList=x.type==="list";return `<tr><td>${esc(x.dateLabel||x.date||"")}</td><td>${esc(isList?x.serial:(x.serial||""))}</td><td>${esc(x.customer||"")}</td><td>${esc(x.job||"")}</td><td>${esc(x.destination||"")}</td><td>${isList?esc(x.cut||""):""}</td><td>${isList?fmt(x.qty)+" 枚":""}</td><td>${isList?fmt(x.weight)+" kg":""}</td><td>${isList?esc(x.maxSize):""}</td><td>${esc(x.slip||"")}</td><td>${esc(x.sales||"")}</td><td class="note-col">${esc(x.note||"")}</td><td class="proc-col">${isList?(x.procPrint||"－"):"－"}</td></tr>`}).join("");let area=document.getElementById("deliveryPrintArea");if(!area){area=document.createElement("div");area.id="deliveryPrintArea";document.body.appendChild(area)}area.innerHTML=`<h1>配達表</h1><div class="print-meta">印刷日：${new Date().toLocaleDateString("ja-JP")}　件数：${entries.length}件</div><table><thead><tr><th>納期・日付</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先・訪問先</th><th>切断方法</th><th>枚数</th><th>角重量</th><th>最大サイズ</th><th>伝票番号</th><th>売上番号</th><th class="note-col">備考</th><th class="proc-col">工程</th></tr></thead><tbody>${rows||'<tr><td colspan="13">対象データはありません</td></tr>'}</tbody></table>`;setPrintPage("A4 landscape");document.body.dataset.printMode="delivery";document.title="配達表";window.print()}
 window.printDelivery=printDelivery;const BASE_TITLE="生産管理システム | 生産・配送管理";window.addEventListener("afterprint",()=>{setPrintPage("");delete document.body.dataset.printMode;document.title=BASE_TITLE});
