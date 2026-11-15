@@ -548,36 +548,43 @@ function boardMeta(key){
   return tab ? { id: `${tab}__${group || ''}`, tab } : null;
 }
 
-function pushDelivery(){ return chain(S.q, 'delivery', async () => {
+function pushDelivery(stageOnly){ return chain(S.q, 'delivery', async () => {
   const B = S.B;
   const meta = B.getMeta(), evs = B.getEvents();
+  const isAdmin = Policy.admin(S.staff);
+  const hasDel = isAdmin || Policy.hasTab(S.staff, 'delivery');
   const jobs = [];
 
-  for(const k of metaKeys(meta)){
-    if(!k.startsWith('L:')) continue;
-    const id = k.slice(2);
-    const b = S.base.lists.get(id);
-    if(!b) continue;
-    const m = meta[k] || {};
-    const baseInfo = (S.base.info && S.base.info.get(id)) || {};
-    const ops = [];
-    ['slip','sales'].forEach(f => { if((m[f] || '') !== (baseInfo[f] || '')) ops.push({ p: ['deliveryInfo', f], v: m[f] || '' }); });
-    if(ops.length) jobs.push({ col: 'lists', id, ops, base: { deliveryInfo: baseInfo } });
-  }
+  if(!stageOnly && hasDel){
+    for(const k of metaKeys(meta)){
+      if(!k.startsWith('L:')) continue;
+      const id = k.slice(2);
+      const b = S.base.lists.get(id);
+      if(!b) continue;
+      const m = meta[k] || {};
+      const baseInfo = (S.base.info && S.base.info.get(id)) || {};
+      const ops = [];
+      ['slip','sales'].forEach(f => { if((m[f] || '') !== (baseInfo[f] || '')) ops.push({ p: ['deliveryInfo', f], v: m[f] || '' }); });
+      if(ops.length) jobs.push({ col: 'lists', id, ops, base: { deliveryInfo: baseInfo } });
+    }
 
-  const curEv = new Map(evs.map(e => [String(e.id), evDoc(e, meta)]));
-  for(const [id, doc] of curEv){
-    const b = S.base.events.get(id);
-    if(!b) jobs.push({ col: 'events', id, create: true, doc });
-    else {
-      const ops = diff(b, doc);
-      if(ops.length) jobs.push({ col: 'events', id, ops, base: b });
+    const curEv = new Map(evs.map(e => [String(e.id), evDoc(e, meta)]));
+    for(const [id, doc] of curEv){
+      const b = S.base.events.get(id);
+      if(!b) jobs.push({ col: 'events', id, create: true, doc });
+      else {
+        const ops = diff(b, doc);
+        if(ops.length) jobs.push({ col: 'events', id, ops, base: b });
+      }
     }
   }
 
   const boards = [{ key: 'delivery', arr: B.getDeliveryBoard() }, ...Object.entries(B.getStageBoard() || {}).map(([key, arr]) => ({ key, arr }))];
   for(const bd of boards){
+    if(stageOnly && bd.key === 'delivery') continue;
     const bm = boardMeta(bd.key); if(!bm) continue;
+    if(!isAdmin && !Policy.hasTab(S.staff, bm.tab)) continue;
+    if(!S.base.boards.has(bm.id) && (!S.activeTab || bm.tab !== S.activeTab)) continue;
     const memos = boardDocFrom(bd.key, bd.arr);
     const b = S.base.boards.get(bm.id);
     if(!b){ if(Object.keys(memos).length) jobs.push({ col: 'boards', id: bm.id, create: true, doc: { tab: bm.tab, key: bd.key, memos } }); }
@@ -629,11 +636,11 @@ function pushDelivery(){ return chain(S.q, 'delivery', async () => {
       }
     }
   } catch(e) {
-    fail(e, '配達表・メモ');
+    fail(e, stageOnly ? '工程メモ' : '配達表・メモ');
   }
 });}
 const stripEv = d => { const x = clone(d); SERVER_STRIP.forEach(k => delete x[k]); return x; };
-function pushStage(){ return pushDelivery(); }
+function pushStage(){ return pushDelivery(true); }
 
 /* ---------- 生産計画（切断速度）差分送信 ---------- */
 function pushSettings(){ return chain(S.q, 'settings', async () => {
