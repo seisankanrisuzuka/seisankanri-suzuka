@@ -150,6 +150,7 @@ body.on-stage main{padding:4px 8px}
  .stage-table tr.memo-row{display:flex;align-items:center;gap:6px;padding:3px 2px;border-bottom:1px solid #e5eaf0}
  .stage-table tr.memo-row td{padding:0;border:0;flex:1}
  .stage-table tr.memo-row td:first-child{flex:0 0 auto}
+ .stage-table tr.memo-row td:first-child:empty{display:none}
 }
 
 /* ===== 積み込み一覧：山が多くても横に伸びない ===== */
@@ -409,8 +410,8 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261115b"></script>
-  <script src="sync.js?v=20261115b"></script>
+  <script src="firebase-config.js?v=20261115c"></script>
+  <script src="sync.js?v=20261115c"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -969,9 +970,14 @@ function stageDaySummaryHtml(process,ls){const rows=stageDaySummary(process,ls);
 function stageFilterWords(process){return String($("stageKw-"+process)?.value||"").normalize("NFKC").toLowerCase().split(/\s+/).filter(Boolean)}
 function stageFilterActive(process){return stageFilterWords(process).length>0}
 function stageFilterOk(process,l){const words=stageFilterWords(process);if(!words.length)return true;const hay=`${l.serial} ${l.job} ${l.customer||""} ${l.destination} ${l.deliveryNote||""} ${cutLabel(l)} ${dueLabel(l)} ${dueStart(l)}`.normalize("NFKC").toLowerCase();return words.every(w=>hay.includes(w))}
-/* メモ・備考の編集はPC（画面幅900px以上でマウス操作）のみ。スマホ・タブレットでは表示だけ */
-const EDIT_MQ=window.matchMedia("(min-width: 900px) and (hover: hover)");
-function canEditNotes(){return EDIT_MQ.matches}
+/* メモ・備考の編集はPCのみ（幅が狭いウィンドウやタッチ対応PCでも可）。スマホ・タブレットでは表示だけ */
+const EDIT_MQ=window.matchMedia("(any-pointer: fine)");
+function canEditNotes(){
+ const ua=navigator.userAgent||"";
+ if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))return false;
+ if(EDIT_MQ&&EDIT_MQ.matches)return true;
+ return window.innerWidth>=768;
+}
 window.setProcessNote=(serial,process,val)=>{if(!canEditNotes())return;const l=lists.find(x=>String(x.serial)===String(serial));if(!l)return;l.processNotes=l.processNotes&&typeof l.processNotes==="object"?l.processNotes:{};const v=String(val||"").trim();if(v)l.processNotes[process]=v;else delete l.processNotes[process];save()};
 function stageTableHtml(process,key,group){
  const ce=canEditNotes();
