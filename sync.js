@@ -372,6 +372,10 @@ function showConflictDialog(info){
     : (staffObj ? `${staffObj.data.name}（ID: ${staffObj.data.staffId}）` : (whoUid || '他の社員'));
   const when = info.updatedAt ? new Date(info.updatedAt).toLocaleTimeString('ja-JP') : '直前';
 
+  const targetLabel = info.col === 'boards'
+    ? `メモ表（${info.id}）`
+    : (info.col === 'events' ? `配送イベント ${info.id}` : `工程番号 ${info.id}`);
+
   dlg.innerHTML = `
     <div style="background:#fff;border-radius:16px;width:min(94vw,540px);padding:24px;box-shadow:0 25px 50px -12px rgba(0,0,0,.3);border:2px solid #ef4444;box-sizing:border-box">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
@@ -379,7 +383,7 @@ function showConflictDialog(info){
         <h2 style="margin:0;font-size:18px;font-weight:800;color:#991b1b">最新データが更新されています</h2>
       </div>
       <p style="margin:0 0 14px;color:#1e293b;font-size:14px;line-height:1.6">
-        工程番号 <b>${esc(info.id)}</b> は、<b>${esc(who)}</b> によって <b>${esc(when)}</b> に更新されています。
+        <b>${esc(targetLabel)}</b> は、<b>${esc(who)}</b> によって <b>${esc(when)}</b> に更新されています。
       </p>
       <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:#7f1d1d">
         <b>【保存できません】</b><br>
@@ -400,6 +404,16 @@ function showConflictDialog(info){
 
   document.getElementById('cfReloadBtn').onclick = () => {
     dlg.style.display = 'none';
+    if(info.col === 'boards'){
+      if(info.cur) ingestBoards([{ id: info.id, data: info.cur }]);
+      toast('メモ表の最新データを読み直しました');
+      return;
+    }
+    if(info.col === 'events'){
+      resync();
+      toast('最新データを読み直しました');
+      return;
+    }
     const latestDoc = { ...stripServer(info.cur), version: (info.cur && info.cur.version) || 1 };
     S.base.lists.set(info.id, latestDoc);
     const ls = docToList(latestDoc);
@@ -565,7 +579,7 @@ function pushDelivery(stageOnly){ return chain(S.q, 'delivery', async () => {
       const baseInfo = (S.base.info && S.base.info.get(id)) || {};
       const ops = [];
       ['slip','sales'].forEach(f => { if((m[f] || '') !== (baseInfo[f] || '')) ops.push({ p: ['deliveryInfo', f], v: m[f] || '' }); });
-      if(ops.length) jobs.push({ col: 'lists', id, ops, base: { deliveryInfo: baseInfo } });
+      if(ops.length) jobs.push({ col: 'lists', id, ops, base: { deliveryInfo: baseInfo, version: b.version || 1 } });
     }
 
     const curEv = new Map(evs.map(e => [String(e.id), evDoc(e, meta)]));
@@ -573,7 +587,7 @@ function pushDelivery(stageOnly){ return chain(S.q, 'delivery', async () => {
       const b = S.base.events.get(id);
       if(!b) jobs.push({ col: 'events', id, create: true, doc });
       else {
-        const ops = diff(b, doc);
+        const ops = diff(b, doc, skipLocal);
         if(ops.length) jobs.push({ col: 'events', id, ops, base: b });
       }
     }
@@ -590,7 +604,7 @@ function pushDelivery(stageOnly){ return chain(S.q, 'delivery', async () => {
     if(!b){ if(Object.keys(memos).length) jobs.push({ col: 'boards', id: bm.id, create: true, doc: { tab: bm.tab, key: bd.key, memos } }); }
     else {
       const ops = diff({ memos: b.memos || {} }, { memos }, null);
-      if(ops.length) jobs.push({ col: 'boards', id: bm.id, ops, base: { memos: b.memos || {} } });
+      if(ops.length) jobs.push({ col: 'boards', id: bm.id, ops, base: { memos: b.memos || {}, version: b.version || 1 } });
     }
   }
 
@@ -607,12 +621,14 @@ function pushDelivery(stageOnly){ return chain(S.q, 'delivery', async () => {
           const j = chunk[k];
           if(j.create){
             if(pre[k]){
-              const ops = diff(pre[k], j.doc);
+              const ops = j.col === 'boards'
+                ? diff({ memos: pre[k].memos || {} }, { memos: j.doc.memos || {} }, null)
+                : diff(pre[k], j.doc, skipLocal);
               if(ops.length) out.push({ j, ...await txUpdate(tx, j.col, j.id, ops, pre[k], pre[k]) });
-              else out.push({ j, latest: pre[k] });
+              else out.push({ j, latest: pre[k], version: pre[k].version || 1 });
             } else {
               await txCreate(tx, j.col, j.id, j.doc, pre[k]);
-              out.push({ j, latest: j.doc });
+              out.push({ j, latest: j.doc, version: 1 });
             }
           } else {
             if(!pre[k]){ out.push({ j, gone: true }); continue; }
@@ -628,10 +644,15 @@ function pushDelivery(stageOnly){ return chain(S.q, 'delivery', async () => {
         if(j.col === 'lists'){
           S.base.info = S.base.info || new Map();
           S.base.info.set(j.id, { ...(S.base.info.get(j.id) || {}), ...Object.fromEntries(j.ops.map(o => [o.p[1], o.v])) });
+          const bl = S.base.lists.get(j.id);
+          if(bl && r.version) bl.version = r.version;
         } else if(j.col === 'events'){
-          S.base.events.set(j.id, clone(r.latest && stripEv(r.latest) || j.doc));
+          const evVer = r.version || (r.latest && r.latest.version) || 1;
+          S.base.events.set(j.id, { ...clone(r.latest && stripEv(r.latest) || j.doc), version: evVer });
         } else if(j.col === 'boards'){
-          S.base.boards.set(j.id, { tab: (r.latest || j.doc).tab, key: (r.latest || j.doc).key, memos: clone((r.latest || j.doc).memos || {}) });
+          const bdVer = r.version || (r.latest && r.latest.version) || 1;
+          const bdSrc = r.latest || j.doc;
+          S.base.boards.set(j.id, { tab: bdSrc.tab, key: bdSrc.key, memos: clone(bdSrc.memos || {}), version: bdVer });
         }
       }
     }
@@ -725,7 +746,7 @@ function ingestEvents(docs){
   docs.forEach(({ id, data }) => {
     if(data.deleted) return;
     const sd = stripEv(data); const old = S.base.events.get(id); const prev = prevEv.get(id);
-    const pend = (prev && old) ? diff(old, evDoc(prev, meta)) : [];
+    const pend = (prev && old) ? diff(old, evDoc(prev, meta), skipLocal) : [];
     S.base.events.set(id, sd);
     const merged = pend.length ? applyOps(sd, pend) : sd;
     const e = clone(merged); const slip = e.slip, sales = e.sales; delete e.slip; delete e.sales; out.push(e);
@@ -743,9 +764,9 @@ function ingestBoards(docs){
   const B = S.B; const stage = B.getStageBoard() || {}; let dboard = B.getDeliveryBoard() || [];
   docs.forEach(({ id, data }) => {
     const old = S.base.boards.get(id); const key = data.key; const localArr = key === 'delivery' ? dboard : (stage[key] || []);
-    const localMemos = boardDocFrom(key, localArr); const pend = old ? diff({ memos: old.memos || {} }, { memos: localMemos }) : [];
+    const localMemos = boardDocFrom(key, localArr); const pend = old ? diff({ memos: old.memos || {} }, { memos: localMemos }, null) : [];
     const memos = applyOps({ memos: data.memos || {} }, pend).memos || {};
-    S.base.boards.set(id, { tab: data.tab, key, memos: clone(data.memos || {}) });
+    S.base.boards.set(id, { tab: data.tab, key, memos: clone(data.memos || {}), version: data.version || 1 });
     const arr = localArr.filter(x => !(x && (x.type === 'memo' || x.memo !== undefined)));
     Object.entries(memos).sort((a, b) => (a[1].pos || 0) - (b[1].pos || 0)).forEach(([mid, m]) => {
       const item = key === 'delivery' ? { key: mid, memo: m.text } : { type: 'memo', id: mid, text: m.text };
