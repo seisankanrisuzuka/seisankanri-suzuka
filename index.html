@@ -383,7 +383,7 @@ body.on-stage .arch-toggle span{display:none}
 .rep-chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px}
 .rep-chart-head h3{margin:0;font-size:14px;color:var(--navy)}
 .rep-chart-sum{font-size:12px;color:#334155}
-.rep-chart-sum b.q{color:#1d4ed8}.rep-chart-sum b.w{color:#c2410c}
+.rep-chart-sum b.w{color:#1d4ed8}.rep-chart-sum b.q{color:#c2410c}
 .rep-chart-readout{font-size:11.5px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;margin-bottom:6px;min-height:24px}
 .rep-chart-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .rep-chart-scroll svg{display:block}
@@ -428,8 +428,8 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261120e"></script>
-  <script src="sync.js?v=20261120e"></script>
+  <script src="firebase-config.js?v=20261120g"></script>
+  <script src="sync.js?v=20261120g"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -538,7 +538,7 @@ body.on-stage .arch-toggle span{display:none}
 <div id="reportBody" style="margin-top:10px"></div></div>
 <div class="panel no-print" id="reportChartPanel">
 <h2>工程別 枚数・重量 複合グラフ（期間集計）</h2>
-<p class="help">指定した期間に完了した工程について、工程別（切断は切断方法別）に枚数（棒）と重量（折れ線）を1日ごと・月ごとで表示します。</p>
+<p class="help">指定した期間に完了した工程について、工程別（切断は切断方法別）に重量（棒）と枚数（折れ線）を1日ごと・月ごとで表示します。</p>
 <div class="row">
  <div class="field"><label>期間（開始日）</label><input id="reportChartStart" type="date"></div>
  <div class="field"><label>期間（終了日）</label><input id="reportChartEnd" type="date"></div>
@@ -557,8 +557,8 @@ body.on-stage .arch-toggle span{display:none}
  </div>
 </div>
 <div class="rep-chart-legend">
- <span><span class="rep-lg-bar"></span>枚数（左軸：枚）</span>
- <span><span class="rep-lg-line"></span>角重量（右軸：kg）</span>
+ <span><span class="rep-lg-bar"></span>角重量（左軸：kg）</span>
+ <span><span class="rep-lg-line"></span>枚数（右軸：枚）</span>
  <span class="help">グラフ上の棒や点に触れる（スマホはタップ）と詳細数値を表示します</span>
 </div>
 <div id="reportChartGrid" class="rep-chart-grid"></div>
@@ -581,9 +581,8 @@ body.on-stage .arch-toggle span{display:none}
 <div class="panel"><h2>材質・板厚ごとの角重量</h2><p class="help">指定した納期期間内の部材を、材質と板厚ごとに集計します。重量は個数×角重量です。</p><label class="inline-check" style="display:inline-flex;align-items:center;gap:7px;margin:8px 0 12px"><input id="planExcludeCutDone" type="checkbox" onchange="renderPlan()"> 切断完了を除く</label><div id="planMaterialSummary"></div></div>
 </section>
 <section id="settings" class="page">
-<div class="panel"><h2>データのバックアップ</h2><p class="help">この試作版のデータは今使っているブラウザ内に保存されます。ExcelのCSVは手動で読み込み・書き出しする方式で、Excelとのリアルタイム同期や他の端末との自動共有はまだありません。大切なデータはJSONでバックアップしてください。</p><div class="row"><button class="btn" id="exportBtn">JSONを書き出す</button><div class="field"><label>バックアップJSONを読み込む</label><button class="btn secondary" type="button" id="importPickBtn" style="width:100%">ファイルを選択</button><input id="importFile" type="file" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" tabindex="-1"><div class="help" id="importFileName" style="margin-top:4px"></div></div></div><div id="backupMsg" class="help"></div></div>
+<div class="panel"><h2>データのバックアップ</h2><div class="row"><button class="btn" id="exportBtn">JSONを書き出す</button><div class="field"><label>バックアップJSONを読み込む</label><button class="btn secondary" type="button" id="importPickBtn" style="width:100%">ファイルを選択</button><input id="importFile" type="file" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" tabindex="-1"><div class="help" id="importFileName" style="margin-top:4px"></div></div></div><div id="backupMsg" class="help"></div></div>
 <div class="panel"><h2>リストのCSV出力</h2><p class="help">登録済みのリストをCSVで書き出します。納期を指定すると、その期間に納期がかかるリストだけを出力します（未入力なら全件）。</p><div class="row"><div class="field"><label>納期（開始日）</label><input id="exportDueStart" type="date"></div><div class="field"><label>納期（終了日）</label><input id="exportDueEnd" type="date"></div></div><div id="exportCsvCount" class="help" style="margin:6px 0"></div><div class="btn-bar"><button class="btn" type="button" id="exportCsvBtn">アプリのリストをCSV出力</button><button class="btn secondary" type="button" id="exportCsvClearBtn">解除</button></div><div id="exportCsvMsg" class="help" style="margin-top:8px"></div></div>
-<div class="panel"><h2>CSVの列名について</h2><p class="help">専用CSVはヘッダーなしのA-L列で読み込みます。D列「残数」は無視し、総重量はC列「個数」×K列「角重量」で計算します。L列「実重量」は総重量に使用しません。CSVの文字コードはUTF-8とShift-JISに対応します。試作版では工程ごとの実績時間や担当者別集計はまだありません。</p></div>
 <div class="panel"><h2>完了済みリストの表示</h2><p class="help">積み込みが全部完了したリストは、完了した翌日から全体状況・工程管理・各工程タブ・積み込み・配達表・生産計画に表示されません（データは消えません）。チェックを入れると、これらの画面にも表示します。</p><label class="inline-check" style="display:inline-flex;align-items:center;gap:8px;margin:6px 0"><input type="checkbox" id="showArchived" style="width:auto"> 完了済みも表示する</label><div id="archCount" class="help" style="margin-top:4px"></div></div>
 <div class="panel admin-only" id="auditPanel">
   <h2>操作履歴（監査ログ）の管理</h2>
@@ -1441,15 +1440,15 @@ function renderComboSvg(pts,cardW,mode){
  const W=padL+plotW+padR;
  const slotW=plotW/pts.length,barW=Math.max(4,Math.min(34,slotW*0.56));
  const maxQ=Math.max(...pts.map(p=>p.qty),0),maxW=Math.max(...pts.map(p=>p.w),0);
- const yMaxQ=niceAxisMax(maxQ),yMaxW=niceAxisMax(maxW);
+ const yMaxW=niceAxisMax(maxW),yMaxQ=niceAxisMax(maxQ);
  let svg=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img">`;
- svg+=`<text x="${padL-6}" y="13" text-anchor="end" font-size="10.5" font-weight="700" fill="#1d4ed8">枚</text>`;
- svg+=`<text x="${padL+plotW+6}" y="13" text-anchor="start" font-size="10.5" font-weight="700" fill="#c2410c">kg</text>`;
+ svg+=`<text x="${padL-6}" y="13" text-anchor="end" font-size="10.5" font-weight="700" fill="#1d4ed8">kg</text>`;
+ svg+=`<text x="${padL+plotW+6}" y="13" text-anchor="start" font-size="10.5" font-weight="700" fill="#c2410c">枚</text>`;
  for(let i=0;i<=4;i++){
   const t=i/4,y=padT+plotH*(1-t);
   svg+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${padL+plotW}" y2="${y.toFixed(1)}" stroke="${i===0?"#94a3b8":"#e2e8f0"}" stroke-width="1"${i>0?' stroke-dasharray="3,3"':""}/>`;
-  svg+=`<text x="${padL-6}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="#1d4ed8">${esc(fmtAxisVal(yMaxQ*t))}</text>`;
-  svg+=`<text x="${padL+plotW+6}" y="${(y+3.5).toFixed(1)}" text-anchor="start" font-size="10" fill="#c2410c">${esc(fmtAxisVal(yMaxW*t))}</text>`;
+  svg+=`<text x="${padL-6}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="#1d4ed8">${esc(fmtAxisVal(yMaxW*t))}</text>`;
+  svg+=`<text x="${padL+plotW+6}" y="${(y+3.5).toFixed(1)}" text-anchor="start" font-size="10" fill="#c2410c">${esc(fmtAxisVal(yMaxQ*t))}</text>`;
  }
  svg+=`<rect class="rc-focus" x="${padL}" y="${padT}" width="${slotW.toFixed(1)}" height="${plotH}" fill="#eff6ff" opacity="0"/>`;
  const linePts=[];
@@ -1457,21 +1456,21 @@ function renderComboSvg(pts,cardW,mode){
  let barsHtml="",xLblHtml="",hitsHtml="";
  pts.forEach((p,i)=>{
   const cx=padL+(i+0.5)*slotW;
-  const bh=yMaxQ>0?(p.qty/yMaxQ)*plotH:0,by=padT+plotH-bh;
+  const bh=yMaxW>0?(p.w/yMaxW)*plotH:0,by=padT+plotH-bh;
   if(bh>0)barsHtml+=`<rect x="${(cx-barW/2).toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(1.5,bh).toFixed(1)}" rx="2" fill="#3b82f6" fill-opacity="0.82"/>`;
-  const ly=padT+plotH-(yMaxW>0?(p.w/yMaxW)*plotH:0);
+  const ly=padT+plotH-(yMaxQ>0?(p.qty/yMaxQ)*plotH:0);
   linePts.push(`${cx.toFixed(1)},${ly.toFixed(1)}`);
   const isLast=i===pts.length-1,tooClose=!isLast&&(pts.length-1-i)*slotW<minLblPx*0.85;
   if((i%step===0&&!tooClose)||isLast){
    xLblHtml+=`<text x="${cx.toFixed(1)}" y="${padT+plotH+16}" text-anchor="middle" font-size="10" fill="#475569">${esc(p.short)}</text>`;
   }
-  const tip=`${p.label}：${fmt(p.qty)}枚 ／ ${fmt(p.w)} kg（${p.cnt}件）`;
+  const tip=`${p.label}：${fmt(p.w)} kg ／ ${fmt(p.qty)}枚（${p.cnt}件）`;
   hitsHtml+=`<rect class="rc-hit" x="${(padL+i*slotW).toFixed(1)}" y="${padT}" width="${slotW.toFixed(1)}" height="${plotH}" fill="transparent" data-txt="${esc(tip)}" onmouseenter="showChartTip(this)" onclick="showChartTip(this)"><title>${esc(tip)}</title></rect>`;
  });
  svg+=barsHtml;
  if(linePts.length>1)svg+=`<polyline fill="none" stroke="#ea580c" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="${linePts.join(" ")}"/>`;
  linePts.forEach((pt,i)=>{
-  const [px,py]=pt.split(","),r=pts[i].w>0?3.3:2.2,op=pts[i].w>0?1:0.45;
+  const [px,py]=pt.split(","),r=pts[i].qty>0?3.3:2.2,op=pts[i].qty>0?1:0.45;
   svg+=`<circle cx="${px}" cy="${py}" r="${r}" fill="#ea580c" fill-opacity="${op}" stroke="#fff" stroke-width="1.2"/>`;
  });
  svg+=xLblHtml+hitsHtml+`</svg>`;
@@ -1524,7 +1523,7 @@ function renderReportCharts(){
   const pts=buckets.map(b=>{const v=s.buckets[b.key]||{qty:0,w:0,cnt:0};return {...b,qty:v.qty,w:Math.round(v.w*10)/10,cnt:v.cnt}});
   const tq=pts.reduce((a,p)=>a+p.qty,0),tw=Math.round(pts.reduce((a,p)=>a+p.w,0)*10)/10,tc=pts.reduce((a,p)=>a+p.cnt,0);
   const peak=pts.reduce((best,p)=>p.w>best.w||(p.w===best.w&&p.qty>best.qty)?p:best,pts[0]);
-  return `<div class="rep-chart-card"><div class="rep-chart-head"><h3>${esc(s.title)}</h3><div class="rep-chart-sum">${tc}件 ／ <b class="q">${fmt(tq)}枚</b> ／ <b class="w">${fmt(tw)} kg</b></div></div><div class="rep-chart-readout">最大：${esc(peak.label)}（${fmt(peak.qty)}枚 ／ ${fmt(peak.w)} kg）</div><div class="rep-chart-scroll">${renderComboSvg(pts,cardW,reportChartMode)}</div></div>`;
+  return `<div class="rep-chart-card"><div class="rep-chart-head"><h3>${esc(s.title)}</h3><div class="rep-chart-sum">${tc}件 ／ <b class="w">${fmt(tw)} kg</b> ／ <b class="q">${fmt(tq)}枚</b></div></div><div class="rep-chart-readout">最大：${esc(peak.label)}（${fmt(peak.w)} kg ／ ${fmt(peak.qty)}枚）</div><div class="rep-chart-scroll">${renderComboSvg(pts,cardW,reportChartMode)}</div></div>`;
  }).join("");
 }
 function setReportChartMode(m){
