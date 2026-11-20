@@ -428,8 +428,8 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261120g"></script>
-  <script src="sync.js?v=20261120g"></script>
+  <script src="firebase-config.js?v=20261120h"></script>
+  <script src="sync.js?v=20261120h"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -538,7 +538,7 @@ body.on-stage .arch-toggle span{display:none}
 <div id="reportBody" style="margin-top:10px"></div></div>
 <div class="panel no-print" id="reportChartPanel">
 <h2>工程別 枚数・重量 複合グラフ（期間集計）</h2>
-<p class="help">指定した期間に完了した工程について、工程別（切断は切断方法別）に重量（棒）と枚数（折れ線）を1日ごと・月ごとで表示します。</p>
+<p class="help">指定した期間に完了した工程について、工程別（切断は切断方法別）に重量（棒）と枚数（折れ線）を1日ごと・月ごとで表示します。切断方法が「外注」のもののみ、完了日ではなく「納期」で集計します。</p>
 <div class="row">
  <div class="field"><label>期間（開始日）</label><input id="reportChartStart" type="date"></div>
  <div class="field"><label>期間（終了日）</label><input id="reportChartEnd" type="date"></div>
@@ -1486,10 +1486,24 @@ function renderReportCharts(){
  if(!buckets.length){grid.innerHTML='<div class="empty">期間内の集計対象がありません</div>';return}
  const seriesMap={};
  lists.forEach(l=>{
+  const isOutCut=cutLabel(l)==="外注";
+  if((!procFilter||procFilter==="切断")&&isOutCut){
+   const dt=dueStart(l);
+   if(dt&&dt>=start&&dt<=end){
+    const bKey=reportChartMode==="month"?dt.slice(0,7):dt;
+    const sKey="切断|外注";
+    if(!seriesMap[sKey])seriesMap[sKey]={key:sKey,proc:"切断",sub:"外注",title:"切断 - 外注（納期基準）",buckets:{}};
+    const cell=seriesMap[sKey].buckets[bKey]=seriesMap[sKey].buckets[bKey]||{qty:0,w:0,cnt:0};
+    cell.qty+=total(l,"qty");
+    cell.w+=total(l,"weight");
+    cell.cnt+=1;
+   }
+  }
   const seen=new Set();
   (l.processes||[]).map(normalizeProcessName).forEach(p=>{
    if(seen.has(p))return;seen.add(p);
    if(p==="バンドソー"||l.processStatus?.[p]!=="done")return;
+   if(p==="切断"&&isOutCut)return;
    if(procFilter&&procFilter!==p)return;
    const dt=doneDateOf(l,p);
    if(!dt||dt<start||dt>end)return;
