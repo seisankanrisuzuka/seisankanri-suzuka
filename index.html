@@ -370,6 +370,24 @@ body.on-stage .arch-toggle span{display:none}
 .rep-total{margin-top:6px;padding:6px 10px;background:#e0ecff;border-radius:8px;font-size:13px}
 .rep-grand{margin-top:10px;padding:10px 12px;background:#dcfce7;border:1px solid #86efac;border-radius:10px;font-size:14px}
 #reportBody table{min-width:0!important;width:100%}#reportBody th,#reportBody td{padding:5px 6px;font-size:12.5px;white-space:nowrap}
+.rep-chart-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
+.rep-mode-btns,.rep-preset-btns{display:inline-flex;gap:4px;flex-wrap:wrap}
+.rep-mode-btns .btn.active{background:var(--navy);color:#fff}
+.rep-chart-legend{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:12px;color:#334155;margin:6px 0 10px}
+.rep-lg-bar{display:inline-block;width:12px;height:12px;background:#3b82f6;border-radius:2px;vertical-align:middle;margin-right:4px}
+.rep-lg-line{display:inline-block;width:16px;height:3px;background:#ea580c;vertical-align:middle;margin-right:4px;position:relative}
+.rep-lg-line::after{content:"";position:absolute;left:5px;top:-2.5px;width:6px;height:6px;border-radius:50%;background:#ea580c;border:1px solid #fff}
+.rep-chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:12px}
+@media(max-width:560px){.rep-chart-grid{grid-template-columns:1fr}}
+.rep-chart-card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;min-width:0}
+.rep-chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.rep-chart-head h3{margin:0;font-size:14px;color:var(--navy)}
+.rep-chart-sum{font-size:12px;color:#334155}
+.rep-chart-sum b.q{color:#1d4ed8}.rep-chart-sum b.w{color:#c2410c}
+.rep-chart-readout{font-size:11.5px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;margin-bottom:6px;min-height:24px}
+.rep-chart-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.rep-chart-scroll svg{display:block}
+.rc-hit{cursor:pointer}
 #reportPrintArea{display:none}
 @media print{
  body[data-print-mode="report"] #reportPrintArea{display:block!important;position:static!important;width:100%!important;color:#000!important;background:#fff!important}
@@ -410,8 +428,8 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261120d"></script>
-  <script src="sync.js?v=20261120d"></script>
+  <script src="firebase-config.js?v=20261120e"></script>
+  <script src="sync.js?v=20261120e"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -518,6 +536,33 @@ body.on-stage .arch-toggle span{display:none}
 <div class="row no-print"><div class="field"><label>完了日</label><input id="reportDate" type="date"></div></div>
 <div class="btn-bar no-print"><button class="btn secondary" type="button" id="reportToday">今日</button><button class="btn teal" type="button" id="reportPrint">印刷</button></div>
 <div id="reportBody" style="margin-top:10px"></div></div>
+<div class="panel no-print" id="reportChartPanel">
+<h2>工程別 枚数・重量 複合グラフ（期間集計）</h2>
+<p class="help">指定した期間に完了した工程について、工程別（切断は切断方法別）に枚数（棒）と重量（折れ線）を1日ごと・月ごとで表示します。</p>
+<div class="row">
+ <div class="field"><label>期間（開始日）</label><input id="reportChartStart" type="date"></div>
+ <div class="field"><label>期間（終了日）</label><input id="reportChartEnd" type="date"></div>
+ <div class="field"><label>工程</label><select id="reportChartProc"><option value="">すべて</option><option value="切断">切断（方法別）</option><option value="キリ">キリ穴</option><option value="ショット">ショット</option><option value="開先">開先</option><option value="曲げ">曲げ</option></select></div>
+</div>
+<div class="rep-chart-bar">
+ <div class="rep-mode-btns" role="group" aria-label="集計単位">
+  <button class="btn small secondary active" type="button" id="repModeDay">1日ごと</button>
+  <button class="btn small secondary" type="button" id="repModeMonth">月ごと</button>
+ </div>
+ <div class="rep-preset-btns">
+  <button class="btn small secondary" type="button" onclick="setReportChartPreset('month')">今月</button>
+  <button class="btn small secondary" type="button" onclick="setReportChartPreset('prevMonth')">先月</button>
+  <button class="btn small secondary" type="button" onclick="setReportChartPreset('days30')">直近30日</button>
+  <button class="btn small secondary" type="button" onclick="setReportChartPreset('year')">今年</button>
+ </div>
+</div>
+<div class="rep-chart-legend">
+ <span><span class="rep-lg-bar"></span>枚数（左軸：枚）</span>
+ <span><span class="rep-lg-line"></span>角重量（右軸：kg）</span>
+ <span class="help">グラフ上の棒や点に触れる（スマホはタップ）と詳細数値を表示します</span>
+</div>
+<div id="reportChartGrid" class="rep-chart-grid"></div>
+</div>
 </section>
 <section id="plan" class="page">
 <div class="panel"><h2>納期の期間を指定</h2><div class="row"><div class="field"><label>納期（開始日）</label><input id="planStart" type="date"></div><div class="field"><label>納期（終了日）</label><input id="planEnd" type="date"></div><button class="btn" id="planRefresh" style="flex:0">検索・集計</button></div><p class="help">初期表示は今日から1か月先までの納期です。</p><div id="planResults"></div></div>
@@ -1345,9 +1390,173 @@ function buildReportHtml(date){const by={};lists.forEach(l=>{(l.processes||[]).m
   else{const r=reportTable(label,by[p][""],`${label} 合計`);html+=`<div class="rep-proc">${r.html}</div>`;gq+=r.q;gw+=r.w}});
  if(!any)return '<div class="empty">この日に完了した工程はありません</div>';
  return html}
-function renderReport(){const el=$("reportBody");if(!el)return;const date=$("reportDate")?.value||todayStr();el.innerHTML=buildReportHtml(date)}
+function renderReport(){const el=$("reportBody");if(!el)return;const date=$("reportDate")?.value||todayStr();el.innerHTML=buildReportHtml(date);renderReportCharts()}
 $("reportDate").value=todayStr();$("reportDate").addEventListener("input",renderReport);$("reportToday").addEventListener("click",()=>{$("reportDate").value=todayStr();renderReport()});
 $("reportPrint").addEventListener("click",()=>{const date=$("reportDate").value||todayStr();let area=document.getElementById("reportPrintArea");if(!area){area=document.createElement("div");area.id="reportPrintArea";document.body.appendChild(area)}area.innerHTML=`<h1>日報（${esc(date.replace(/-/g,"/"))} 完了分）</h1>${buildReportHtml(date)}`;setPrintPage("");document.body.dataset.printMode="report";document.title="日報";window.print()});
+
+/* ===== 日報 複合グラフ ===== */
+let reportChartMode="day";
+const CUT_METHOD_ORDER=["ガス","プラズマ","レーザー","シャーリング","外注","未指定"];
+function niceAxisMax(v){
+ if(!(v>0))return 4;
+ const exp=Math.pow(10,Math.floor(Math.log10(v))),f=v/exp;
+ const n=f<=1?1:f<=1.6?1.6:f<=2?2:f<=2.5?2.5:f<=3?3:f<=4?4:f<=5?5:f<=6?6:f<=8?8:10;
+ return n*exp;
+}
+function fmtAxisVal(v){return v===0?"0":Number.isInteger(v)?v.toLocaleString("ja-JP"):v.toLocaleString("ja-JP",{maximumFractionDigits:1})}
+function buildReportBuckets(start,end,mode){
+ if(!start||!end||start>end)return [];
+ if(mode==="month"){
+  const out=[];let [sy,sm]=start.slice(0,7).split("-").map(Number);const [ey,em]=end.slice(0,7).split("-").map(Number);
+  let guard=0;
+  while((sy<ey||(sy===ey&&sm<=em))&&guard++<120){
+   const k=`${sy}-${String(sm).padStart(2,"0")}`;
+   out.push({key:k,label:`${sy}年${sm}月`,short:`${String(sy).slice(2)}/${sm}`});
+   if(++sm>12){sm=1;sy++}
+  }
+  return out;
+ }
+ const s=new Date(start+"T00:00:00"),e=new Date(end+"T00:00:00");
+ if(isNaN(s)||isNaN(e))return [];
+ const diff=Math.round((e-s)/86400000)+1;
+ if(diff>370)return null;
+ const out=[];
+ for(let i=0;i<diff;i++){
+  const d=new Date(s);d.setDate(s.getDate()+i);
+  const y=d.getFullYear(),m=d.getMonth()+1,dd=d.getDate();
+  out.push({key:`${y}-${String(m).padStart(2,"0")}-${String(dd).padStart(2,"0")}`,label:`${y}/${m}/${dd}`,short:`${m}/${dd}`});
+ }
+ return out;
+}
+window.showChartTip=el=>{
+ const card=el.closest(".rep-chart-card");if(!card)return;
+ const ro=card.querySelector(".rep-chart-readout");if(ro)ro.textContent=el.getAttribute("data-txt")||"";
+ const fc=card.querySelector(".rc-focus");
+ if(fc){fc.setAttribute("x",el.getAttribute("x"));fc.setAttribute("width",el.getAttribute("width"));fc.setAttribute("opacity","1")}
+};
+function renderComboSvg(pts,cardW,mode){
+ const padL=54,padR=58,padT=22,padB=32,plotH=164,H=padT+plotH+padB;
+ const minSlot=mode==="month"?56:26;
+ const plotW=Math.max(cardW-padL-padR,pts.length*minSlot,260);
+ const W=padL+plotW+padR;
+ const slotW=plotW/pts.length,barW=Math.max(4,Math.min(34,slotW*0.56));
+ const maxQ=Math.max(...pts.map(p=>p.qty),0),maxW=Math.max(...pts.map(p=>p.w),0);
+ const yMaxQ=niceAxisMax(maxQ),yMaxW=niceAxisMax(maxW);
+ let svg=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img">`;
+ svg+=`<text x="${padL-6}" y="13" text-anchor="end" font-size="10.5" font-weight="700" fill="#1d4ed8">枚</text>`;
+ svg+=`<text x="${padL+plotW+6}" y="13" text-anchor="start" font-size="10.5" font-weight="700" fill="#c2410c">kg</text>`;
+ for(let i=0;i<=4;i++){
+  const t=i/4,y=padT+plotH*(1-t);
+  svg+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${padL+plotW}" y2="${y.toFixed(1)}" stroke="${i===0?"#94a3b8":"#e2e8f0"}" stroke-width="1"${i>0?' stroke-dasharray="3,3"':""}/>`;
+  svg+=`<text x="${padL-6}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="#1d4ed8">${esc(fmtAxisVal(yMaxQ*t))}</text>`;
+  svg+=`<text x="${padL+plotW+6}" y="${(y+3.5).toFixed(1)}" text-anchor="start" font-size="10" fill="#c2410c">${esc(fmtAxisVal(yMaxW*t))}</text>`;
+ }
+ svg+=`<rect class="rc-focus" x="${padL}" y="${padT}" width="${slotW.toFixed(1)}" height="${plotH}" fill="#eff6ff" opacity="0"/>`;
+ const linePts=[];
+ const minLblPx=mode==="month"?48:34,step=Math.max(1,Math.ceil(minLblPx/slotW));
+ let barsHtml="",xLblHtml="",hitsHtml="";
+ pts.forEach((p,i)=>{
+  const cx=padL+(i+0.5)*slotW;
+  const bh=yMaxQ>0?(p.qty/yMaxQ)*plotH:0,by=padT+plotH-bh;
+  if(bh>0)barsHtml+=`<rect x="${(cx-barW/2).toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(1.5,bh).toFixed(1)}" rx="2" fill="#3b82f6" fill-opacity="0.82"/>`;
+  const ly=padT+plotH-(yMaxW>0?(p.w/yMaxW)*plotH:0);
+  linePts.push(`${cx.toFixed(1)},${ly.toFixed(1)}`);
+  const isLast=i===pts.length-1,tooClose=!isLast&&(pts.length-1-i)*slotW<minLblPx*0.85;
+  if((i%step===0&&!tooClose)||isLast){
+   xLblHtml+=`<text x="${cx.toFixed(1)}" y="${padT+plotH+16}" text-anchor="middle" font-size="10" fill="#475569">${esc(p.short)}</text>`;
+  }
+  const tip=`${p.label}：${fmt(p.qty)}枚 ／ ${fmt(p.w)} kg（${p.cnt}件）`;
+  hitsHtml+=`<rect class="rc-hit" x="${(padL+i*slotW).toFixed(1)}" y="${padT}" width="${slotW.toFixed(1)}" height="${plotH}" fill="transparent" data-txt="${esc(tip)}" onmouseenter="showChartTip(this)" onclick="showChartTip(this)"><title>${esc(tip)}</title></rect>`;
+ });
+ svg+=barsHtml;
+ if(linePts.length>1)svg+=`<polyline fill="none" stroke="#ea580c" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="${linePts.join(" ")}"/>`;
+ linePts.forEach((pt,i)=>{
+  const [px,py]=pt.split(","),r=pts[i].w>0?3.3:2.2,op=pts[i].w>0?1:0.45;
+  svg+=`<circle cx="${px}" cy="${py}" r="${r}" fill="#ea580c" fill-opacity="${op}" stroke="#fff" stroke-width="1.2"/>`;
+ });
+ svg+=xLblHtml+hitsHtml+`</svg>`;
+ return svg;
+}
+function renderReportCharts(){
+ const grid=$("reportChartGrid");if(!grid)return;
+ const start=$("reportChartStart")?.value||"",end=$("reportChartEnd")?.value||"",procFilter=$("reportChartProc")?.value||"";
+ if(!start||!end){grid.innerHTML='<div class="empty">開始日と終了日を指定してください</div>';return}
+ if(start>end){grid.innerHTML='<div class="empty">開始日は終了日以前の日付を指定してください</div>';return}
+ const buckets=buildReportBuckets(start,end,reportChartMode);
+ if(buckets===null){grid.innerHTML='<div class="empty">「1日ごと」表示は最大370日までです。「月ごと」に切り替えるか期間を短くしてください。</div>';return}
+ if(!buckets.length){grid.innerHTML='<div class="empty">期間内の集計対象がありません</div>';return}
+ const seriesMap={};
+ lists.forEach(l=>{
+  const seen=new Set();
+  (l.processes||[]).map(normalizeProcessName).forEach(p=>{
+   if(seen.has(p))return;seen.add(p);
+   if(p==="バンドソー"||l.processStatus?.[p]!=="done")return;
+   if(procFilter&&procFilter!==p)return;
+   const dt=doneDateOf(l,p);
+   if(!dt||dt<start||dt>end)return;
+   const bKey=reportChartMode==="month"?dt.slice(0,7):dt;
+   const sub=p==="切断"?cutLabel(l):"";
+   const sKey=p==="切断"?`切断|${sub}`:p;
+   const title=p==="切断"?`切断 - ${sub}`:(p==="キリ"?"キリ穴":p);
+   if(!seriesMap[sKey])seriesMap[sKey]={key:sKey,proc:p,sub,title,buckets:{}};
+   const cell=seriesMap[sKey].buckets[bKey]=seriesMap[sKey].buckets[bKey]||{qty:0,w:0,cnt:0};
+   cell.qty+=total(l,"qty");
+   cell.w+=total(l,"weight");
+   cell.cnt+=1;
+  });
+ });
+ const keys=Object.keys(seriesMap).sort((a,b)=>{
+  const sa=seriesMap[a],sb=seriesMap[b];
+  const ia=PROCESSES.indexOf(sa.proc),ib=PROCESSES.indexOf(sb.proc);
+  if(ia!==ib)return ia-ib;
+  if(sa.proc==="切断"){
+   const ca=CUT_METHOD_ORDER.indexOf(sa.sub),cb=CUT_METHOD_ORDER.indexOf(sb.sub);
+   if(ca!==-1||cb!==-1)return (ca===-1?999:ca)-(cb===-1?999:cb);
+   return sa.sub.localeCompare(sb.sub,"ja");
+  }
+  return 0;
+ });
+ if(!keys.length){grid.innerHTML='<div class="empty">指定した期間に完了した工程はありません</div>';return}
+ const gw=grid.clientWidth||600;
+ const cardW=gw>=950?Math.floor((gw-12)/2)-26:Math.max(300,gw-26);
+ grid.innerHTML=keys.map(k=>{
+  const s=seriesMap[k];
+  const pts=buckets.map(b=>{const v=s.buckets[b.key]||{qty:0,w:0,cnt:0};return {...b,qty:v.qty,w:Math.round(v.w*10)/10,cnt:v.cnt}});
+  const tq=pts.reduce((a,p)=>a+p.qty,0),tw=Math.round(pts.reduce((a,p)=>a+p.w,0)*10)/10,tc=pts.reduce((a,p)=>a+p.cnt,0);
+  const peak=pts.reduce((best,p)=>p.w>best.w||(p.w===best.w&&p.qty>best.qty)?p:best,pts[0]);
+  return `<div class="rep-chart-card"><div class="rep-chart-head"><h3>${esc(s.title)}</h3><div class="rep-chart-sum">${tc}件 ／ <b class="q">${fmt(tq)}枚</b> ／ <b class="w">${fmt(tw)} kg</b></div></div><div class="rep-chart-readout">最大：${esc(peak.label)}（${fmt(peak.qty)}枚 ／ ${fmt(peak.w)} kg）</div><div class="rep-chart-scroll">${renderComboSvg(pts,cardW,reportChartMode)}</div></div>`;
+ }).join("");
+}
+function setReportChartMode(m){
+ reportChartMode=m;
+ $("repModeDay")?.classList.toggle("active",m==="day");
+ $("repModeMonth")?.classList.toggle("active",m==="month");
+ renderReportCharts();
+}
+window.setReportChartPreset=preset=>{
+ const now=new Date(),y=now.getFullYear(),m=now.getMonth();
+ const fmtD=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+ if(preset==="month"){
+  $("reportChartStart").value=fmtD(new Date(y,m,1));$("reportChartEnd").value=fmtD(now);setReportChartMode("day");
+ }else if(preset==="prevMonth"){
+  $("reportChartStart").value=fmtD(new Date(y,m-1,1));$("reportChartEnd").value=fmtD(new Date(y,m,0));setReportChartMode("day");
+ }else if(preset==="days30"){
+  const s=new Date(now);s.setDate(s.getDate()-29);
+  $("reportChartStart").value=fmtD(s);$("reportChartEnd").value=fmtD(now);setReportChartMode("day");
+ }else if(preset==="year"){
+  $("reportChartStart").value=`${y}-01-01`;$("reportChartEnd").value=fmtD(now);setReportChartMode("month");
+ }
+};
+{
+ const now=new Date();
+ $("reportChartStart").value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-01`;
+ $("reportChartEnd").value=todayStr();
+ $("reportChartStart").addEventListener("input",renderReportCharts);
+ $("reportChartEnd").addEventListener("input",renderReportCharts);
+ $("reportChartProc").addEventListener("change",renderReportCharts);
+ $("repModeDay").addEventListener("click",()=>setReportChartMode("day"));
+ $("repModeMonth").addEventListener("click",()=>setReportChartMode("month"));
+}
 EDIT_MQ.addEventListener&&EDIT_MQ.addEventListener("change",()=>{document.body.classList.toggle("no-edit-notes",!canEditNotes());renderStages()});
 document.body.classList.toggle("no-edit-notes",!canEditNotes());
 processUI();renderAll();
