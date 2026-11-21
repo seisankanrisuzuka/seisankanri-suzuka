@@ -429,9 +429,9 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261121b"></script>
-  <script src="sync.js?v=20261121b"></script>
-<script src="/_aistudio-iframe.js?v=29045eb3"></script></head>
+  <script src="firebase-config.js?v=20261121e"></script>
+  <script src="sync.js?v=20261121e"></script>
+</head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
 <nav>
@@ -1082,19 +1082,35 @@ $("importCsvBtn").onclick=async()=>{
  const selectedCutMethod=$("metaCutMethod").value;
  const isFullyOutsourced=processesRaw.length===0;
  if(!job&&!destination){$("registerMsg").textContent="工事名または納入先を入力してください。";return}
- let added=0,updated=0,skipped=0,rowsCount=0;
+ let added=0,updated=0,skipped=0,rowsCount=0;const importedSerials=[];
  for(const item of pendingCsvFiles){const rows=item.rows.map(e=>({...e.row,processType:selectedCutMethod||e.row.processType||(isFullyOutsourced?"外注":"")}));if(!rows.length){skipped++;continue}rowsCount+=rows.length;
    const sourceFile=item.file.name.replace(/\.csv$/i,"");
    // Keep filename as a stable identifier so repeated imports update the same list.
    let existing=lists.find(l=>l.sourceFile===item.file.name); let serialVal=existing?existing.serial:(await serialAsync(processesRaw));
-   if(existing){existing.due=due||existing.due;existing.dueStart=due||existing.dueStart||existing.due;existing.dueEnd=dueEnd||existing.dueEnd||existing.dueStart;existing.deliveryMethod=deliveryMethod||existing.deliveryMethod||"";existing.job=job||existing.job;existing.customer=customer||existing.customer;existing.destination=destination||existing.destination;if(note)existing.deliveryNote=note;existing.fullyOutsourced=isFullyOutsourced;existing.cutMethod=selectedCutMethod||(isFullyOutsourced?"外注":existing.cutMethod||"");const holes=normalizedHoleData(item);if(holes.holeDiameters.length)existing.holeDiameters=holes.holeDiameters;if(holes.holeCount>0)existing.holeCount=holes.holeCount;const oldRows=existing.rows||[];rows.forEach((r,i)=>{r._rowId=`${existing.serial}::${r.partNo||r.name||"row"}::${i}`;const old=oldRows.find(o=>o._rowId===r._rowId)||(oldRows[i]&&oldRows[i].partNo===r.partNo&&oldRows[i].name===r.name?oldRows[i]:null);r.notes=old?.notes||{};if(!r.processType)r.processType=old?.processType||"";});existing.rows=rows;existing.sourceFile=item.file.name;existing.processes=processesRaw;existing.processStatus=existing.processStatus||{};existing.processes.forEach(p=>{if(!existing.processStatus[p])existing.processStatus[p]="pending"});updated++;
+   if(existing){existing.due=due||existing.due;existing.dueStart=due||existing.dueStart||existing.due;existing.dueEnd=dueEnd||existing.dueEnd||existing.dueStart;existing.deliveryMethod=deliveryMethod||existing.deliveryMethod||"";existing.job=job||existing.job;existing.customer=customer||existing.customer;existing.destination=destination||existing.destination;if(note)existing.deliveryNote=note;existing.fullyOutsourced=isFullyOutsourced;existing.cutMethod=selectedCutMethod||(isFullyOutsourced?"外注":existing.cutMethod||"");const holes=normalizedHoleData(item);if(holes.holeDiameters.length)existing.holeDiameters=holes.holeDiameters;if(holes.holeCount>0)existing.holeCount=holes.holeCount;const oldRows=existing.rows||[];rows.forEach((r,i)=>{r._rowId=`${existing.serial}::${r.partNo||r.name||"row"}::${i}`;const old=oldRows.find(o=>o._rowId===r._rowId)||(oldRows[i]&&oldRows[i].partNo===r.partNo&&oldRows[i].name===r.name?oldRows[i]:null);r.notes=old?.notes||{};if(!r.processType)r.processType=old?.processType||"";});existing.rows=rows;existing.sourceFile=item.file.name;existing.processes=processesRaw;existing.processStatus=existing.processStatus||{};existing.processes.forEach(p=>{if(!existing.processStatus[p])existing.processStatus[p]="pending"});updated++;importedSerials.push({serial:existing.serial,name:item.file.name,mode:"更新"});
    }else{
      rows.forEach((r,i)=>{r._rowId=`${serialVal}::${r.partNo||r.name||"row"}::${i}`;r.notes={};});
-     const holes=normalizedHoleData(item);const l={serial:serialVal,sourceFile:item.file.name,due,dueStart:due,dueEnd:dueEnd||due,deliveryMethod,cutMethod:selectedCutMethod||(isFullyOutsourced?"外注":""),fullyOutsourced:isFullyOutsourced,job,customer,destination,processes:processesRaw,rows,processOrder:{},holeCount:holes.holeCount,holeDiameters:holes.holeDiameters,processStatus:{},processDates:{},piles:null,pileItems:[],loads:[],delivered:false,createdAt:new Date().toISOString()};l.processes.forEach(p=>l.processStatus[p]="pending");if(note)l.deliveryNote=note;lists.push(l);added++;
+     const holes=normalizedHoleData(item);const l={serial:serialVal,sourceFile:item.file.name,due,dueStart:due,dueEnd:dueEnd||due,deliveryMethod,cutMethod:selectedCutMethod||(isFullyOutsourced?"外注":""),fullyOutsourced:isFullyOutsourced,job,customer,destination,processes:processesRaw,rows,processOrder:{},holeCount:holes.holeCount,holeDiameters:holes.holeDiameters,processStatus:{},processDates:{},piles:null,pileItems:[],loads:[],delivered:false,createdAt:new Date().toISOString()};l.processes.forEach(p=>l.processStatus[p]="pending");if(note)l.deliveryNote=note;lists.push(l);added++;importedSerials.push({serial:serialVal,name:item.file.name,mode:"新規"});
    }
  }
- save();$("registerMsg").textContent=`取込完了：${pendingCsvFiles.length}ファイル、部材 ${rowsCount}行。新規 ${added}リスト、更新 ${updated}リスト${skipped?`、空ファイル等 ${skipped}件をスキップ`:""}。D列「残数」は無視し、総重量は個数×角重量で計算します。`;pendingCsvFiles=[];renderHoleEntryForms();$("csvFile").value="";if(added+updated>0)alert(`登録完了しました\n新規 ${added}リスト、更新 ${updated}リスト`);
+ save();
+ const serialBadgesHtml=importedSerials.map(x=>`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 0;border-bottom:1px solid #dcfce7"><span style="display:inline-block;padding:2px 8px;border-radius:6px;background:#1d4ed8;color:#fff;font-weight:800;font-size:13px;letter-spacing:.03em">${esc(x.serial)}</span><span style="font-weight:700;color:#0f172a">${esc(x.name)}</span><span style="font-size:11px;padding:1px 6px;border-radius:4px;background:${x.mode==="新規"?"#dcfce7":"#fef3c7"};color:${x.mode==="新規"?"#166534":"#92400e"};font-weight:700">${esc(x.mode)}</span></div>`).join("");
+ $("registerMsg").innerHTML=`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 12px;color:#166534"><div style="font-weight:700;font-size:13px;margin-bottom:4px">取込完了：${pendingCsvFiles.length}ファイル、部材 ${rowsCount}行（新規 ${added}リスト ／ 更新 ${updated}リスト${skipped?` ／ スキップ ${skipped}件`:""}）</div>${importedSerials.length?`<div style="margin:6px 0">${serialBadgesHtml}</div>`:""}<div style="font-size:11px;color:#15803d">※ D列「残数」は無視し、総重量は個数×角重量で計算します。</div></div>`;
+ pendingCsvFiles=[];renderHoleEntryForms();$("csvFile").value="";
+ if(added+updated>0)showRegisterResultModal(`登録完了しました（新規 ${added}リスト、更新 ${updated}リスト）`,importedSerials);
 };
+function showRegisterResultModal(summaryText,items,footerNote=""){
+ document.getElementById("registerResultModal")?.remove();
+ const m=document.createElement("div");m.id="registerResultModal";m.className="done-modal-back";
+ const rowsHtml=(items||[]).map(x=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span style="display:inline-block;padding:3px 9px;border-radius:6px;background:#1d4ed8;color:#fff;font-weight:800;font-size:14px;flex-shrink:0">${esc(x.serial)}</span><span style="font-size:13px;font-weight:600;color:#0f172a;overflow-wrap:anywhere">${esc(x.name||"")}</span></div><span style="font-size:11px;padding:2px 7px;border-radius:4px;background:${x.mode==="新規"?"#dcfce7":"#fef3c7"};color:${x.mode==="新規"?"#166534":"#92400e"};font-weight:700;flex-shrink:0">${esc(x.mode||"新規")}</span></div>`).join("");
+ m.innerHTML=`<div class="done-modal-card" role="dialog" aria-modal="true" style="width:min(92vw,420px)"><h3 style="color:#166534;margin-bottom:6px">登録完了</h3><p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#0f172a">${esc(summaryText)}</p>${rowsHtml?`<div style="font-size:12px;font-weight:700;color:#475569;margin-bottom:5px">発行された工程番号</div><div style="max-height:260px;overflow-y:auto">${rowsHtml}</div>`:""}${footerNote?`<p class="help" style="margin:6px 0 0;font-size:11px">${esc(footerNote)}</p>`:""}<div class="done-modal-btns" style="margin-top:12px"><button class="btn" id="regResultOkBtn" type="button">OK（閉じる）</button></div></div>`;
+ document.body.appendChild(m);
+ const close=()=>m.remove();
+ document.getElementById("regResultOkBtn").onclick=close;
+ m.addEventListener("click",e=>{if(e.target===m)close()});
+ m.addEventListener("keydown",e=>{if(e.key==="Escape"||e.key==="Enter")close()});
+ document.getElementById("regResultOkBtn").focus();
+}
 $("clearCsvMetaBtn").addEventListener("click",()=>{if(!confirm("CSV登録の入力内容（共通情報・選択中のCSV・穴径の入力）をすべてクリアしますか？"))return;["metaDue","metaDueEnd","metaJob","metaCustomer","metaDestination","metaNote"].forEach(id=>$(id).value="");$("metaMultiDue").checked=false;$("metaDueEndWrap").style.display="none";$("metaCutMethod").value="";$("metaDeliveryMethod").value="";document.querySelectorAll('input[name="metaProcess"]').forEach(x=>x.checked=false);pendingCsvFiles=[];$("csvFile").value="";renderHoleEntryForms();localStorage.removeItem(META_KEY);$("registerMsg").textContent=""});
 function csvEscape(v){let s=String(v??"");return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
 
@@ -1132,7 +1148,7 @@ $('saveManualListBtn').addEventListener('click',async()=>{
  if(rows.some(r=>!(r.qty>=0))){$('manualEntryMsg').textContent='個数は0以上の数値で入力してください。';return}
  const serialVal=await serialAsync(processes);rows.forEach((r,i)=>r._rowId=`${serialVal}::${r.name||'row'}::${i}`);
  const l={serial:serialVal,sourceFile:'手入力',due,dueStart:due,dueEnd:dueEnd||due,deliveryMethod,cutMethod:cutMethod||(!processes.length?'外注':''),fullyOutsourced:processes.length===0,job,customer,destination,processes,rows,processOrder:{},holeCount,holeDiameters,processStatus:{},processDates:{},piles:null,pileItems:[],loads:[],delivered:false,createdAt:new Date().toISOString()};l.processes.forEach(p=>l.processStatus[p]='pending');const manualNote=$('manualNote').value.trim();if(manualNote)l.deliveryNote=manualNote;lists.push(l);save();
- $('manualEntryMsg').textContent=`登録しました。工程番号：${serialVal}`;saveManualDefaults();alert(`登録完了しました\n工程番号：${serialVal}\n（入力内容は次の登録用に残してあります）`);
+ $('manualEntryMsg').textContent=`登録しました。工程番号：${serialVal}`;saveManualDefaults();showRegisterResultModal('手入力リストを登録しました',[{serial:serialVal,name:job||destination||'手入力',mode:'新規'}],'入力内容は次の登録用に残してあります。');
 });
 
 $("exportCsvBtn").onclick=()=>{
@@ -1771,7 +1787,7 @@ function xlsxBuildComboWorkbook(sheets){
 
   const sheetXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-<dimension ref="A1:H${totRow}"/>
+<dimension ref="A1:D${totRow}"/>
 <sheetViews><sheetView${idx===1?' tabSelected="1"':''} workbookViewId="0"/></sheetViews>
 <sheetFormatPr defaultRowHeight="18"/>
 <cols><col min="1" max="1" width="16" customWidth="1"/><col min="2" max="2" width="11" customWidth="1"/><col min="3" max="3" width="15" customWidth="1"/><col min="4" max="4" width="16" customWidth="1"/><col min="5" max="8" width="12" customWidth="1"/></cols>
@@ -1787,7 +1803,7 @@ function xlsxBuildComboWorkbook(sheets){
 
   const drawingXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-<xdr:twoCellAnchor>
+<xdr:twoCellAnchor editAs="oneCell">
 <xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>2</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
 <xdr:to><xdr:col>8</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>21</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
 <xdr:graphicFrame macro="">
@@ -1822,7 +1838,7 @@ function xlsxBuildComboWorkbook(sheets){
 <c:barDir val="col"/><c:grouping val="clustered"/><c:varyColors val="0"/>
 <c:ser><c:idx val="0"/><c:order val="0"/>
 <c:tx><c:strRef><c:f>${xlsxEsc(wTitleRef)}</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>合計重量(kg)</c:v></c:pt></c:strCache></c:strRef></c:tx>
-<c:spPr><a:solidFill><a:srgbClr val="3B82F6"/></a:solidFill><a:ln><a:noFill/></a:ln></c:spPr>
+<c:spPr><a:solidFill><a:srgbClr val="3B82F6"/></a:solidFill></c:spPr>
 <c:invertIfNegative val="0"/>
 <c:cat><c:strRef><c:f>${xlsxEsc(catRef)}</c:f>${catCache}</c:strRef></c:cat>
 <c:val><c:numRef><c:f>${xlsxEsc(wRef)}</c:f>${wCache}</c:numRef></c:val>
@@ -1835,19 +1851,20 @@ function xlsxBuildComboWorkbook(sheets){
 <c:grouping val="standard"/><c:varyColors val="0"/>
 <c:ser><c:idx val="1"/><c:order val="1"/>
 <c:tx><c:strRef><c:f>${xlsxEsc(qTitleRef)}</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>合計枚数(枚)</c:v></c:pt></c:strCache></c:strRef></c:tx>
-<c:spPr><a:ln w="28575" cap="rnd"><a:solidFill><a:srgbClr val="EA580C"/></a:solidFill><a:round/></a:ln></c:spPr>
-<c:marker><c:symbol val="circle"/><c:size val="5"/><c:spPr><a:solidFill><a:srgbClr val="EA580C"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:ln></c:spPr></c:marker>
+<c:spPr><a:ln w="28575"><a:solidFill><a:srgbClr val="EA580C"/></a:solidFill></a:ln></c:spPr>
+<c:marker><c:symbol val="circle"/><c:size val="5"/><c:spPr><a:solidFill><a:srgbClr val="EA580C"/></a:solidFill></c:spPr></c:marker>
 <c:cat><c:strRef><c:f>${xlsxEsc(catRef)}</c:f>${catCache}</c:strRef></c:cat>
 <c:val><c:numRef><c:f>${xlsxEsc(qRef)}</c:f>${qCache}</c:numRef></c:val>
 <c:smooth val="0"/>
 </c:ser>
 <c:dLbls><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>
 <c:marker val="1"/><c:smooth val="0"/>
-<c:axId val="1001"/><c:axId val="1004"/>
+<c:axId val="1003"/><c:axId val="1004"/>
 </c:lineChart>
 <c:catAx><c:axId val="1001"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="b"/><c:numFmt formatCode="General" sourceLinked="1"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="low"/><c:crossAx val="1002"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/></c:catAx>
 <c:valAx><c:axId val="1002"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="E2E8F0"/></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="950" b="1"><a:solidFill><a:srgbClr val="1D4ED8"/></a:solidFill></a:defRPr></a:pPr><a:r><a:rPr lang="ja-JP" sz="950" b="1"><a:solidFill><a:srgbClr val="1D4ED8"/></a:solidFill></a:rPr><a:t>重量 (kg)</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val="0"/></c:title><c:numFmt formatCode="#,##0.0" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="1001"/><c:crosses val="autoZero"/><c:crossBetween val="between"/></c:valAx>
-<c:valAx><c:axId val="1004"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/></c:scaling><c:delete val="0"/><c:axPos val="r"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="950" b="1"><a:solidFill><a:srgbClr val="C2410C"/></a:solidFill></a:defRPr></a:pPr><a:r><a:rPr lang="ja-JP" sz="950" b="1"><a:solidFill><a:srgbClr val="C2410C"/></a:solidFill></a:rPr><a:t>枚数 (枚)</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val="0"/></c:title><c:numFmt formatCode="#,##0" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="1001"/><c:crosses val="max"/><c:crossBetween val="between"/></c:valAx>
+<c:catAx><c:axId val="1003"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="1"/><c:axPos val="b"/><c:numFmt formatCode="General" sourceLinked="1"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="none"/><c:crossAx val="1004"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/></c:catAx>
+<c:valAx><c:axId val="1004"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/></c:scaling><c:delete val="0"/><c:axPos val="r"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="950" b="1"><a:solidFill><a:srgbClr val="C2410C"/></a:solidFill></a:defRPr></a:pPr><a:r><a:rPr lang="ja-JP" sz="950" b="1"><a:solidFill><a:srgbClr val="C2410C"/></a:solidFill></a:rPr><a:t>枚数 (枚)</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val="0"/></c:title><c:numFmt formatCode="#,##0" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="1003"/><c:crosses val="max"/><c:crossBetween val="between"/></c:valAx>
 </c:plotArea>
 <c:legend><c:legendPos val="t"/><c:overlay val="0"/></c:legend>
 <c:plotVisOnly val="1"/><c:dispBlanksAs val="zero"/>
@@ -1887,6 +1904,7 @@ ${ctOverrides.join("")}
 
  const workbookXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<bookViews><workbookView xWindow="0" yWindow="0" windowWidth="24000" windowHeight="15000"/></bookViews>
 <sheets>${wbSheets.join("")}</sheets>
 </workbook>`;
 
@@ -1897,13 +1915,13 @@ ${wbRels.join("")}
 
  const stylesXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0"/><numFmt numFmtId="165" formatCode="#,##0.0"/></numFmts>
+<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.0"/></numFmts>
 <fonts count="5">
 <font><sz val="11"/><color rgb="FF0F172A"/><name val="Yu Gothic UI"/></font>
 <font><b/><sz val="13"/><color rgb="FF1E3A8A"/><name val="Yu Gothic UI"/></font>
 <font><sz val="10"/><color rgb="FF475569"/><name val="Yu Gothic UI"/></font>
-<font><b/><sz val="10.5"/><color rgb="FFFFFFFF"/><name val="Yu Gothic UI"/></font>
-<font><b/><sz val="10.5"/><color rgb="FF0F172A"/><name val="Yu Gothic UI"/></font>
+<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Yu Gothic UI"/></font>
+<font><b/><sz val="10"/><color rgb="FF0F172A"/><name val="Yu Gothic UI"/></font>
 </fonts>
 <fills count="4">
 <fill><patternFill patternType="none"/></fill>
@@ -1922,13 +1940,15 @@ ${wbRels.join("")}
 <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
 <xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
 <xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
-<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
 <xf numFmtId="0" fontId="4" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="3" fontId="4" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
 <xf numFmtId="164" fontId="4" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
-<xf numFmtId="165" fontId="4" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+<dxfs count="0"/>
+<tableStyles count="0" defaultTableStyle="TableStyleMedium2" defaultPivotStyle="PivotStyleLight16"/>
 </styleSheet>`;
 
  const ssXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
