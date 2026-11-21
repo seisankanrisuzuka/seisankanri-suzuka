@@ -428,8 +428,8 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261120h"></script>
-  <script src="sync.js?v=20261120h"></script>
+  <script src="firebase-config.js?v=20261120i"></script>
+  <script src="sync.js?v=20261120i"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -534,7 +534,8 @@ body.on-stage .arch-toggle span{display:none}
 <div class="panel"><h2>日報（工程の完了日ごと）</h2>
 <p class="help">選んだ日に「完了」になった工程を、工程ごとに、材質・板厚別の枚数と重量で集計します。切断は切断方法ごとに分けます（バンドソー工程は載せません）。完了日は、各工程の完了ボタンを押したときに入力した日付です。</p>
 <div class="row no-print"><div class="field"><label>完了日</label><input id="reportDate" type="date"></div></div>
-<div class="btn-bar no-print"><button class="btn secondary" type="button" id="reportToday">今日</button><button class="btn teal" type="button" id="reportPrint">印刷</button></div>
+<div class="btn-bar no-print"><button class="btn secondary" type="button" id="reportToday">今日</button><button class="btn secondary" type="button" id="reportRefreshBtn">最新データに更新</button><button class="btn teal" type="button" id="reportPrint">印刷</button></div>
+<div id="reportSyncStatus" class="help no-print" style="margin-top:6px"></div>
 <div id="reportBody" style="margin-top:10px"></div></div>
 <div class="panel no-print" id="reportChartPanel">
 <h2>工程別 枚数・重量 複合グラフ（期間集計）</h2>
@@ -1250,7 +1251,14 @@ function purgeTargets(){
   });
 }
 function updatePurgeCount(){
-  try{ $("purgeCount").textContent = `削除対象（90日以上経過の完了案件）：${purgeTargets().length}件 / 全${lists.length}件`; }catch(e){}
+  try{
+    const n = Math.max(1, parseInt($("purgeDays").value, 10) || 90);
+    if(window.Sync && window.Sync.on && window.Sync.fetchPurgeTargets){
+      $("purgeCount").textContent = `「完了案件の削除を確認」を押すと、完了から${n}日以上経過した対象をクラウドから検索します（削除前に日報・グラフ用の月別集計を自動保存します）。`;
+    } else {
+      $("purgeCount").textContent = `削除対象（${n}日以上経過の完了案件）：${purgeTargets().length}件 / 全${lists.length}件`;
+    }
+  }catch(e){}
 }
 $("purgeDays").addEventListener("input", updatePurgeCount);
 updatePurgeCount();
@@ -1287,9 +1295,22 @@ $("purgeBtn").onclick = async () => {
     alert("完了案件の削除は管理者のみ実行できます。");
     return;
   }
-  const t = purgeTargets();
+  const days = Math.max(1, parseInt($("purgeDays").value, 10) || 90);
+  let t = [];
+  if(window.Sync && window.Sync.on && window.Sync.fetchPurgeTargets){
+    $("purgeMsg").textContent = "クラウドから削除対象を検索中...";
+    try{
+      t = await window.Sync.fetchPurgeTargets(days);
+      $("purgeMsg").textContent = "";
+    }catch(e){
+      $("purgeMsg").textContent = "検索中にエラーが発生しました：" + (e.message || e);
+      return;
+    }
+  } else {
+    t = purgeTargets();
+  }
   if(!t.length){
-    $("purgeMsg").textContent = "90日以上経過した削除対象の完了案件はありません。";
+    $("purgeMsg").textContent = `${days}日以上経過した削除対象の完了案件はありません。`;
     return;
   }
 
@@ -1346,11 +1367,11 @@ $("purgeBtn").onclick = async () => {
   document.getElementById("purgeExecBtn").onclick = async () => {
     if(!confirm(`本当に ${t.length} 件の完了案件を削除しますか？\nこの操作は取り消せません。`)) return;
     modal.style.display = "none";
-    $("purgeMsg").textContent = "クラウドおよびローカルから削除中...";
+    $("purgeMsg").textContent = "日報サマリーを保存して削除中...";
     if(window.Sync && window.Sync.purgeCompletedLists){
       try{
-        const cnt = await window.Sync.purgeCompletedLists(t.map(l => l.serial));
-        $("purgeMsg").textContent = `${cnt} 件の完了案件を削除しました。`;
+        const cnt = await window.Sync.purgeCompletedLists(t);
+        $("purgeMsg").textContent = `${cnt} 件の完了案件を削除しました（日報・グラフの集計データは保存済み）。`;
         updatePurgeCount();
       }catch(e){
         $("purgeMsg").textContent = "削除中にエラーが発生しました：" + (e.message || e);
@@ -1380,17 +1401,99 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
   }document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".page").forEach(x=>x.classList.toggle("active",x.id===b.dataset.page));document.body.classList.toggle("on-stage",String(b.dataset.page).startsWith("stage-")||b.dataset.page==="delivery");if(b.dataset.page==="plan")renderPlan();if(b.dataset.page==="report")renderReport();if(["stage-cut","stage-bandsaw","stage-kiri","stage-shot","stage-bevel","stage-bend"].includes(b.dataset.page))renderStages()});
 const today=new Date();const dateStr=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;const monthLater=new Date(today);monthLater.setMonth(monthLater.getMonth()+1);$("planStart").value=dateStr(today);$("planEnd").value=dateStr(monthLater);
 /* ===== 日報 ===== */
-function reportAgg(ls){const g={};ls.forEach(l=>(l.rows||[]).forEach(r=>{const q=num(r.qty),w=r.angleWeight!=null?q*num(r.angleWeight):num(r.weight);const mat=String(r.material||"").trim()||"材質未設定";const t=numFrom(r.thickness);const k=mat+"\u0001"+(t===null?"":t);const o=g[k]=g[k]||{mat,t,qty:0,w:0};o.qty+=q;o.w+=w}));return Object.values(g).sort((a,b)=>a.mat.localeCompare(b.mat,"ja")||(a.t??1e9)-(b.t??1e9))}
-function reportTable(title,ls,totalLabel){const rows=reportAgg(ls);const q=rows.reduce((a,r)=>a+r.qty,0),w=rows.reduce((a,r)=>a+r.w,0);return {q,w,html:`<h3 class="rep-title">${esc(title)}<span class="help" style="margin-left:8px">${ls.length}件</span></h3>${table(["材質","板厚","枚数","重量"],[...rows.map(r=>`<tr><td>${esc(r.mat)}</td><td>${r.t===null?"板厚未設定":esc(r.t)+"mm"}</td><td>${fmt(r.qty)}枚</td><td>${fmt(Math.round(r.w*10)/10)} kg</td></tr>`),`<tr style="background:#f1f5f9"><td colspan="2"><b>${esc(totalLabel||title+" 合計")}</b></td><td><b>${fmt(q)}枚</b></td><td><b>${fmt(Math.round(w*10)/10)} kg</b></td></tr>`])}`}}
-function buildReportHtml(date){const by={};lists.forEach(l=>{(l.processes||[]).map(normalizeProcessName).forEach(p=>{if(p==="バンドソー"||l.processStatus?.[p]!=="done"||doneDateOf(l,p)!==date)return;const sub=p==="切断"?cutLabel(l):"";by[p]=by[p]||{};(by[p][sub]=by[p][sub]||[]).push(l)})});
+function reportAllLists(){
+ const map=new Map();
+ if(window.Sync&&window.Sync.getReportClosedLists){
+  window.Sync.getReportClosedLists().forEach(l=>map.set(String(l.serial),l));
+ }
+ lists.forEach(l=>map.set(String(l.serial),l));
+ return [...map.values()];
+}
+function reportSummaries(){
+ return (window.Sync&&window.Sync.getReportSummaries)?window.Sync.getReportSummaries():[];
+}
+function syncReportRange(force=false){
+ if(!window.Sync||!window.Sync.on||!window.Sync.ensureReportRange)return;
+ const repPage=$("report");
+ if(!force&&(!repPage||!repPage.classList.contains("active")))return;
+ const d=$("reportDate")?.value||todayStr();
+ const s=$("reportChartStart")?.value||d;
+ const e=$("reportChartEnd")?.value||d;
+ const arr=[d,s,e].filter(Boolean).sort();
+ if(!arr.length)return;
+ window.Sync.ensureReportRange(arr[0],arr[arr.length-1],force);
+}
+function addMatsToBucket(b,l){
+ b.cnt+=1;
+ (l.rows||[]).forEach(r=>{
+  const q=num(r.qty),w=r.angleWeight!=null?q*num(r.angleWeight):num(r.weight);
+  const mat=String(r.material||"").trim()||"材質未設定";
+  const t=numFrom(r.thickness);
+  const k=mat+"\u0001"+(t===null?"":String(t));
+  const o=b.mats[k]=b.mats[k]||{mat,t,qty:0,w:0};
+  o.qty+=q;o.w+=w;
+ });
+}
+function mergeSummaryEntryToBucket(b,e){
+ b.cnt+=num(e.cnt);
+ Object.entries(e.mats||{}).forEach(([k,m])=>{
+  const o=b.mats[k]=b.mats[k]||{mat:m.mat||"材質未設定",t:(m.t===undefined||m.t==="")?null:m.t,qty:0,w:0};
+  o.qty+=num(m.qty);o.w+=num(m.w);
+ });
+}
+function reportBucketTable(title,b,totalLabel){
+ const rows=Object.values(b.mats).sort((a,b2)=>a.mat.localeCompare(b2.mat,"ja")||((a.t===null||a.t===""?1e9:Number(a.t))-(b2.t===null||b2.t===""?1e9:Number(b2.t))));
+ const q=rows.reduce((a,r)=>a+r.qty,0),w=rows.reduce((a,r)=>a+r.w,0);
+ return {q,w,html:`<h3 class="rep-title">${esc(title)}<span class="help" style="margin-left:8px">${b.cnt}件</span></h3>${table(["材質","板厚","枚数","重量"],[...rows.map(r=>`<tr><td>${esc(r.mat)}</td><td>${r.t===null||r.t===""?"板厚未設定":esc(r.t)+"mm"}</td><td>${fmt(r.qty)}枚</td><td>${fmt(Math.round(r.w*10)/10)} kg</td></tr>`),`<tr style="background:#f1f5f9"><td colspan="2"><b>${esc(totalLabel||title+" 合計")}</b></td><td><b>${fmt(q)}枚</b></td><td><b>${fmt(Math.round(w*10)/10)} kg</b></td></tr>`])}`};
+}
+function buildReportHtml(date){
+ const by={};
+ const ensureB=(p,sub)=>{by[p]=by[p]||{};return by[p][sub]=by[p][sub]||{cnt:0,mats:{}};};
+ reportAllLists().forEach(l=>{
+  const seen=new Set();
+  (l.processes||[]).map(normalizeProcessName).forEach(p=>{
+   if(seen.has(p))return;seen.add(p);
+   if(p==="バンドソー"||l.processStatus?.[p]!=="done"||doneDateOf(l,p)!==date)return;
+   const sub=p==="切断"?cutLabel(l):"";
+   addMatsToBucket(ensureB(p,sub),l);
+  });
+ });
+ const mKey=String(date||"").slice(0,7);
+ reportSummaries().forEach(doc=>{
+  if(!doc||doc.month!==mKey)return;
+  Object.values(doc.entries||{}).forEach(e=>{
+   if(e&&e.kind==="done"&&e.date===date){
+    mergeSummaryEntryToBucket(ensureB(e.proc,e.sub||""),e);
+   }
+  });
+ });
  let html="",gq=0,gw=0,any=false;
  PROCESSES.forEach(p=>{if(!by[p])return;any=true;const label=p==="キリ"?"キリ穴":p;
-  if(p==="切断"){const subs=Object.keys(by[p]).sort((a,b)=>(a==="未指定")-(b==="未指定")||a.localeCompare(b,"ja"));let pq=0,pw=0;html+=`<div class="rep-proc">`;subs.forEach(sub=>{const r=reportTable(`切断-${sub}`,by[p][sub],`切断-${sub} 小計`);pq+=r.q;pw+=r.w;html+=r.html});html+=`<div class="rep-total">切断 合計：<b>${fmt(pq)}枚</b>／<b>${fmt(Math.round(pw*10)/10)} kg</b></div></div>`;gq+=pq;gw+=pw}
-  else{const r=reportTable(label,by[p][""],`${label} 合計`);html+=`<div class="rep-proc">${r.html}</div>`;gq+=r.q;gw+=r.w}});
+  if(p==="切断"){const subs=Object.keys(by[p]).sort((a,b)=>(a==="未指定")-(b==="未指定")||a.localeCompare(b,"ja"));let pq=0,pw=0;html+=`<div class="rep-proc">`;subs.forEach(sub=>{const r=reportBucketTable(`切断-${sub}`,by[p][sub],`切断-${sub} 小計`);pq+=r.q;pw+=r.w;html+=r.html});html+=`<div class="rep-total">切断 合計：<b>${fmt(pq)}枚</b>／<b>${fmt(Math.round(pw*10)/10)} kg</b></div></div>`;gq+=pq;gw+=pw}
+  else{const r=reportBucketTable(label,by[p][""],`${label} 合計`);html+=`<div class="rep-proc">${r.html}</div>`;gq+=r.q;gw+=r.w}});
  if(!any)return '<div class="empty">この日に完了した工程はありません</div>';
- return html}
-function renderReport(){const el=$("reportBody");if(!el)return;const date=$("reportDate")?.value||todayStr();el.innerHTML=buildReportHtml(date);renderReportCharts()}
+ return html;
+}
+function updateReportSyncStatus(){
+ const st=$("reportSyncStatus");if(!st)return;
+ if(window.Sync&&window.Sync.isReportLoading&&window.Sync.isReportLoading()){
+  st.textContent="過去データ・アーカイブを読み込み中...";
+ } else if(window.Sync&&window.Sync.hasReportRulesWarn&&window.Sync.hasReportRulesWarn()){
+  st.textContent="※ 削除済みアーカイブを表示するには最新の firestore.rules をFirebaseに反映してください。";
+ } else {
+  st.textContent="";
+ }
+}
+function renderReport(){
+ syncReportRange(false);
+ updateReportSyncStatus();
+ const el=$("reportBody");if(!el)return;
+ const date=$("reportDate")?.value||todayStr();
+ el.innerHTML=buildReportHtml(date);
+ renderReportCharts();
+}
 $("reportDate").value=todayStr();$("reportDate").addEventListener("input",renderReport);$("reportToday").addEventListener("click",()=>{$("reportDate").value=todayStr();renderReport()});
+$("reportRefreshBtn").addEventListener("click",()=>syncReportRange(true));
 $("reportPrint").addEventListener("click",()=>{const date=$("reportDate").value||todayStr();let area=document.getElementById("reportPrintArea");if(!area){area=document.createElement("div");area.id="reportPrintArea";document.body.appendChild(area)}area.innerHTML=`<h1>日報（${esc(date.replace(/-/g,"/"))} 完了分）</h1>${buildReportHtml(date)}`;setPrintPage("");document.body.dataset.printMode="report";document.title="日報";window.print()});
 
 /* ===== 日報 複合グラフ ===== */
@@ -1477,6 +1580,8 @@ function renderComboSvg(pts,cardW,mode){
  return svg;
 }
 function renderReportCharts(){
+ syncReportRange(false);
+ updateReportSyncStatus();
  const grid=$("reportChartGrid");if(!grid)return;
  const start=$("reportChartStart")?.value||"",end=$("reportChartEnd")?.value||"",procFilter=$("reportChartProc")?.value||"";
  if(!start||!end){grid.innerHTML='<div class="empty">開始日と終了日を指定してください</div>';return}
@@ -1485,7 +1590,7 @@ function renderReportCharts(){
  if(buckets===null){grid.innerHTML='<div class="empty">「1日ごと」表示は最大370日までです。「月ごと」に切り替えるか期間を短くしてください。</div>';return}
  if(!buckets.length){grid.innerHTML='<div class="empty">期間内の集計対象がありません</div>';return}
  const seriesMap={};
- lists.forEach(l=>{
+ reportAllLists().forEach(l=>{
   const isOutCut=cutLabel(l)==="外注";
   if((!procFilter||procFilter==="切断")&&isOutCut){
    const dt=dueStart(l);
@@ -1516,6 +1621,31 @@ function renderReportCharts(){
    cell.qty+=total(l,"qty");
    cell.w+=total(l,"weight");
    cell.cnt+=1;
+  });
+ });
+ const smStart=start.slice(0,7),smEnd=end.slice(0,7);
+ reportSummaries().forEach(doc=>{
+  if(!doc||!doc.month||doc.month<smStart||doc.month>smEnd)return;
+  Object.values(doc.entries||{}).forEach(e=>{
+   if(!e||!e.date||e.date<start||e.date>end)return;
+   const bKey=reportChartMode==="month"?e.date.slice(0,7):e.date;
+   let sKey="",title="",proc=e.proc||"",sub=e.sub||"";
+   if(e.kind==="outcut"){
+    if(procFilter&&procFilter!=="切断")return;
+    proc="切断";sub="外注";sKey="切断|外注";title="切断 - 外注（納期基準）";
+   } else if(e.kind==="done"){
+    if(proc==="切断"&&sub==="外注")return;
+    if(procFilter&&procFilter!==proc)return;
+    sKey=proc==="切断"?`切断|${sub}`:proc;
+    title=proc==="切断"?`切断 - ${sub}`:(proc==="キリ"?"キリ穴":proc);
+   } else return;
+   if(!seriesMap[sKey])seriesMap[sKey]={key:sKey,proc,sub,title,buckets:{}};
+   const cell=seriesMap[sKey].buckets[bKey]=seriesMap[sKey].buckets[bKey]||{qty:0,w:0,cnt:0};
+   let eq=0,ew=0;
+   Object.values(e.mats||{}).forEach(m=>{eq+=num(m.qty);ew+=num(m.w)});
+   cell.qty+=eq;
+   cell.w+=ew;
+   cell.cnt+=num(e.cnt);
   });
  });
  const keys=Object.keys(seriesMap).sort((a,b)=>{

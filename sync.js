@@ -193,7 +193,9 @@ async function makeFirestore(){
     docGet: async (col, id) => fromFsDoc(await fsMod.getDoc(fsMod.doc(db, col, id))),
     colGet: async (col, f) => {
       const cr = fsMod.collection(db, col);
-      const q = f ? fsMod.query(cr, fsMod.where(f.field, f.op, f.value)) : cr;
+      const q = Array.isArray(f)
+        ? fsMod.query(cr, ...f.map(x => fsMod.where(x.field, x.op, x.value)))
+        : (f ? fsMod.query(cr, fsMod.where(f.field, f.op, f.value)) : cr);
       const snap = await fsMod.getDocs(q);
       return snap.docs.map(d => ({ id: d.id, data: fromFsDoc(d) }));
     },
@@ -239,7 +241,13 @@ const S = {
   qres: {},
   q: { lists: null, delivery: null, settings: null },
   enableAudit: true,   // 操作履歴保存スイッチ
-  dayTimer: null, day: null, changingPw: false
+  dayTimer: null, day: null, changingPw: false,
+  reportClosedLists: new Map(),
+  reportLoadedSince: null,
+  reportSummaries: new Map(),
+  reportSummaryFetched: new Set(),
+  reportLoading: false,
+  reportRulesWarn: false
 };
 
 const idToEmail = id => id.includes('@') ? id : `${id}@${CFG.idDomain || 'seisankanri-suzuka-aa08c.firebaseapp.com'}`;
@@ -855,6 +863,8 @@ function switchTab(tabId){
 
 function resync(){
   const B = S.B; S.raw.clear(); S.pendingCreate.clear(); B.setLists([]); S.base.lists.clear();
+  S.reportClosedLists.clear(); S.reportLoadedSince = null;
+  S.reportSummaries.clear(); S.reportSummaryFetched.clear();
   startLists();
   switchTab(S.activeTab);
 }
@@ -1465,11 +1475,260 @@ async function purgeOldAuditLogs(){
 }
 
 /* ====================================================================
+   日報サマリー（月別アーカイブ）＋ オンデマンド過去データ読込
+   ==================================================================== */
+const REP_ALIASES = {"穴あけ":"キリ","キリ穴":"キリ","キリ工程":"キリ","面取り":"開先","開先工程":"開先","ショットブラスト":"ショット","ショット工程":"ショット","切断工程":"切断","バンドソー工程":"バンドソー","帯鋸":"バンドソー","曲げ工程":"曲げ"};
+const repNum = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const repNumFrom = v => { const m = String(v ?? '').normalize('NFKC').replace(/,/g, '').match(/\d+(?:\.\d+)?/); return m ? parseFloat(m[0]) : null; };
+const repNormProc = v => { const raw = typeof v === 'string' ? v : (v && typeof v === 'object' ? (v.name || v.process || v.value || '') : ''); const s = String(raw).trim(); return REP_ALIASES[s] || s; };
+const repCutLabel = l => (l.cutMethod || (l.rows || []).find(r => r.processType)?.processType || '') || '未指定';
+const repDueStart = l => l.dueStart || l.due || '';
+function repDoneDate(l, p){
+  const v = l.processDoneDates && l.processDoneDates[p];
+  if(v) return v;
+  const iso = l.processCompleted && l.processCompleted[p];
+  if(!iso) return '';
+  const d = new Date(iso);
+  return isNaN(d) ? '' : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function repMonthsBetween(start, end){
+  if(!start || !end || start > end) return [];
+  const out = [];
+  let [sy, sm] = start.slice(0, 7).split('-').map(Number);
+  const [ey, em] = end.slice(0, 7).split('-').map(Number);
+  let guard = 0;
+  while((sy < ey || (sy === ey && sm <= em)) && guard++ < 120){
+    out.push(`${sy}-${String(sm).padStart(2, '0')}`);
+    if(++sm > 12){ sm = 1; sy++; }
+  }
+  return out;
+}
+function repMinusDays(ymd, days){
+  const d = new Date(ymd + 'T00:00:00');
+  if(isNaN(d)) return ymd;
+  d.setDate(d.getDate() - days);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function repAddListToEntries(entries, l, targetMonth){
+  const rowMats = [];
+  (l.rows || []).forEach(r => {
+    const q = repNum(r.qty);
+    const w = r.angleWeight != null ? q * repNum(r.angleWeight) : repNum(r.weight);
+    const mat = String(r.material || '').trim() || '材質未設定';
+    const t = repNumFrom(r.thickness);
+    const mk = mat + '\u0001' + (t === null ? '' : String(t));
+    rowMats.push({ mk, mat, t, q, w });
+  });
+  const addBucket = (kind, dt, proc, sub) => {
+    if(!dt || !/^\d{4}-\d{2}-\d{2}$/.test(dt) || dt.slice(0, 7) !== targetMonth) return;
+    const ek = `${kind}|${dt}|${proc}|${sub}`;
+    const e = entries[ek] || (entries[ek] = { kind, date: dt, proc, sub, cnt: 0, mats: {} });
+    e.cnt += 1;
+    rowMats.forEach(rm => {
+      const m = e.mats[rm.mk] || (e.mats[rm.mk] = { mat: rm.mat, t: rm.t, qty: 0, w: 0 });
+      m.qty += rm.q;
+      m.w += rm.w;
+    });
+  };
+  if(repCutLabel(l) === '外注'){
+    addBucket('outcut', repDueStart(l), '切断', '外注');
+  }
+  const seen = new Set();
+  (l.processes || []).map(repNormProc).forEach(p => {
+    if(seen.has(p)) return; seen.add(p);
+    if(p === 'バンドソー' || !l.processStatus || l.processStatus[p] !== 'done') return;
+    const dt = repDoneDate(l, p);
+    const sub = p === '切断' ? repCutLabel(l) : '';
+    addBucket('done', dt, p, sub);
+  });
+}
+function repAffectedMonths(l){
+  const ms = new Set();
+  if(repCutLabel(l) === '外注'){
+    const dt = repDueStart(l);
+    if(dt && /^\d{4}-\d{2}-\d{2}$/.test(dt)) ms.add(dt.slice(0, 7));
+  }
+  (l.processes || []).map(repNormProc).forEach(p => {
+    if(p === 'バンドソー' || !l.processStatus || l.processStatus[p] !== 'done') return;
+    const dt = repDoneDate(l, p);
+    if(dt && /^\d{4}-\d{2}-\d{2}$/.test(dt)) ms.add(dt.slice(0, 7));
+  });
+  return [...ms];
+}
+
+let _reportRangeJob = null;
+async function ensureReportRange(start, end, forceRefresh = false){
+  if(!S.store || !S.staff || !start || !end || start > end) return;
+  if(forceRefresh){
+    S.reportClosedLists.clear();
+    S.reportLoadedSince = null;
+    S.reportSummaries.clear();
+    S.reportSummaryFetched.clear();
+  }
+  const months = repMonthsBetween(start, end);
+  const missingMonths = months.filter(m => !S.reportSummaryFetched.has(m));
+  const fetchStart = repMinusDays(start, 60);
+  const tday = today();
+  const needLists = !S.reportLoadedSince || fetchStart < S.reportLoadedSince;
+  if(!missingMonths.length && !needLists) return;
+  if(_reportRangeJob) return _reportRangeJob;
+
+  S.reportLoading = true;
+  {
+    const st = document.getElementById('reportSyncStatus');
+    if(st) st.textContent = '過去データ・アーカイブを読み込み中...';
+  }
+
+  _reportRangeJob = (async () => {
+    let updated = false;
+    try {
+      for(const m of missingMonths){
+        try {
+          const doc = await S.store.docGet('reportSummaries', m);
+          S.reportSummaries.set(m, doc || { month: m, entries: {}, archivedSerials: [] });
+          S.reportSummaryFetched.add(m);
+          updated = true;
+        } catch(e){
+          S.reportSummaryFetched.add(m);
+          if(/permission/i.test(String(e && e.message || e))){
+            S.reportRulesWarn = true;
+          } else {
+            console.warn('reportSummaries fetch failed:', m, e);
+          }
+        }
+      }
+      if(needLists){
+        const upperBound = S.reportLoadedSince && S.reportLoadedSince < tday ? S.reportLoadedSince : tday;
+        if(fetchStart < upperBound){
+          const docs = await S.store.colGet('lists', [
+            { field: 'closedDay', op: '>=', value: fetchStart },
+            { field: 'closedDay', op: '<', value: upperBound }
+          ]);
+          docs.forEach(({ id, data }) => {
+            if(!data || data.deleted || data.isOpen !== false) return;
+            const ls = docToList(stripServer(data));
+            if(S.B && S.B.normalize) S.B.normalize(ls);
+            S.reportClosedLists.set(id, ls);
+          });
+          S.reportLoadedSince = fetchStart;
+          updated = true;
+        } else {
+          S.reportLoadedSince = upperBound;
+        }
+      }
+    } catch(e){
+      console.warn('ensureReportRange failed:', e);
+    } finally {
+      S.reportLoading = false;
+      _reportRangeJob = null;
+      if(updated && S.B && S.B.renderSoon){
+        S.B.renderSoon();
+      } else {
+        const st = document.getElementById('reportSyncStatus');
+        if(st) st.textContent = S.reportRulesWarn ? '※ 削除済みアーカイブを表示するには最新の firestore.rules をFirebaseに反映してください。' : '';
+      }
+    }
+  })();
+  return _reportRangeJob;
+}
+
+/* ====================================================================
    完了案件の削除（90日経過後・管理者専用・事前バックアップ対応）
    ==================================================================== */
-async function purgeCompletedLists(serials){
+async function fetchPurgeTargets(days){
   if(!Policy.admin(S.staff)) throw new Error('管理者のみ実行できます');
-  if(!serials || !serials.length) return 0;
+  const n = Math.max(1, parseInt(days, 10) || 90);
+  const d = new Date(); d.setDate(d.getDate() - n);
+  const lim = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const docs = await S.store.colGet('lists', [
+    { field: 'closedDay', op: '>=', value: '2000-01-01' },
+    { field: 'closedDay', op: '<=', value: lim }
+  ]);
+  const map = new Map();
+  docs.forEach(({ id, data }) => {
+    if(!data || data.deleted || data.isOpen !== false || !data.closedDay || data.closedDay > lim) return;
+    const ls = docToList(stripServer(data));
+    if(S.B && S.B.normalize) S.B.normalize(ls);
+    map.set(id, ls);
+  });
+  return [...map.values()].sort((a, b) => String(a.closedDay || '').localeCompare(String(b.closedDay || '')) || String(a.serial).localeCompare(String(b.serial)));
+}
+
+async function purgeCompletedLists(targetsOrSerials){
+  if(!Policy.admin(S.staff)) throw new Error('管理者のみ実行できます');
+  if(!targetsOrSerials || !targetsOrSerials.length) return 0;
+
+  // 1. 削除対象リストの完全なデータを確保（削除前に日報サマリーを作成するため）
+  const targetLists = [];
+  const serials = [];
+  for(const item of targetsOrSerials){
+    if(item && typeof item === 'object' && item.serial){
+      targetLists.push(item);
+      serials.push(String(item.serial));
+    } else {
+      const id = String(item);
+      serials.push(id);
+      let l = S.B.getLists().find(x => String(x.serial) === id) || S.reportClosedLists.get(id);
+      if(!l){
+        const doc = await S.store.docGet('lists', id);
+        if(doc && !doc.deleted){
+          l = docToList(stripServer(doc));
+          if(S.B && S.B.normalize) S.B.normalize(l);
+        }
+      }
+      if(l) targetLists.push(l);
+    }
+  }
+
+  // 2. 削除前に月別の日報・グラフ用サマリーを自動保存（冪等トランザクション）
+  const byMonth = new Map();
+  targetLists.forEach(l => {
+    repAffectedMonths(l).forEach(m => {
+      if(!byMonth.has(m)) byMonth.set(m, []);
+      byMonth.get(m).push(l);
+    });
+  });
+
+  try {
+    for(const [month, mLists] of byMonth.entries()){
+      let updatedDoc = null;
+      await S.store.runTx(async tx => {
+        const cur = await tx.get('reportSummaries', month);
+        const archived = Array.isArray(cur && cur.archivedSerials) ? [...cur.archivedSerials] : [];
+        const archSet = new Set(archived.map(String));
+        const pending = mLists.filter(l => !archSet.has(String(l.serial)));
+        if(!pending.length) return;
+        const entries = clone((cur && cur.entries) || {});
+        pending.forEach(l => {
+          repAddListToEntries(entries, l, month);
+          const sid = String(l.serial);
+          if(!archSet.has(sid)){ archSet.add(sid); archived.push(sid); }
+        });
+        const nv = ((cur && cur.version) || 0) + 1;
+        updatedDoc = {
+          month,
+          entries,
+          archivedSerials: archived,
+          version: nv,
+          updatedAt: TS,
+          updatedBy: S.uid
+        };
+        tx.set('reportSummaries', month, updatedDoc);
+      });
+      if(updatedDoc){
+        S.reportSummaries.set(month, updatedDoc);
+        S.reportSummaryFetched.add(month);
+      }
+    }
+  } catch(e){
+    const msg = String((e && e.message) || e);
+    if(/permission/i.test(msg)){
+      throw new Error('日報アーカイブの保存権限がありません。最新の firestore.rules をFirebaseに反映してから再度お試しください。');
+    }
+    throw new Error('日報アーカイブの保存に失敗したため削除を中止しました: ' + msg);
+  }
+
+  // 3. サマリー保存完了後に本体リストを削除
   let count = 0;
   for(let i = 0; i < serials.length; i += 10){
     const chunk = serials.slice(i, i + 10);
@@ -1482,11 +1741,15 @@ async function purgeCompletedLists(serials){
   }
   // 画面・キャッシュ同期
   const sSet = new Set(serials.map(String));
-  serials.forEach(id => { S.base.lists.delete(id); S.raw.delete(id); });
+  serials.forEach(id => {
+    S.base.lists.delete(id);
+    S.raw.delete(id);
+    S.reportClosedLists.delete(id);
+  });
   const newLists = S.B.getLists().filter(l => !sSet.has(String(l.serial)));
   S.B.setLists(newLists);
   S.B.renderSoon();
-  toast(`${count} 件の完了案件を削除しました`);
+  toast(`${count} 件の完了案件を削除しました（日報・グラフ集計は保存済み）`);
   return count;
 }
 
@@ -1503,6 +1766,8 @@ async function exportAll(){
   const settings = await st.docGet('settings', 'cutSpeeds');
   const counter = await st.docGet('counters', 'serial');
   const staffDocs = await st.colGet('staff', null);
+  let reportSummaryDocs = [];
+  try { reportSummaryDocs = await st.colGet('reportSummaries', null); } catch(e){}
   let auditDocs = [];
   try { auditDocs = (await st.colGet('auditLogs', null)).slice(-200); } catch(e){}
 
@@ -1550,6 +1815,7 @@ async function exportAll(){
     stageBoard,
     cutSpeeds: settings ? settings.items : [],
     serialCounter: counter ? counter.last : 0,
+    reportSummaries: reportSummaryDocs.map(r => stripServer(r.data)),
     staff: staffList,
     auditLogs: auditDocs.map(a => a.data)
   };
@@ -1622,6 +1888,19 @@ async function restore(data){
         if(!c) tx.set('counters', 'serial', { last: mx });
         else if(c.last < mx) tx.update('counters', 'serial', [{ p: ['last'], v: mx }]);
       });
+    }
+
+    if(Array.isArray(data.reportSummaries) && data.reportSummaries.length){
+      for(const rs of data.reportSummaries){
+        if(!rs || !rs.month) continue;
+        try {
+          await st.runTx(async tx => {
+            const pre = await tx.get('reportSummaries', String(rs.month));
+            const nv = ((pre && pre.version) || 0) + 1;
+            tx.set('reportSummaries', String(rs.month), { ...rs, version: nv, updatedAt: TS, updatedBy: S.uid });
+          });
+        } catch(e){}
+      }
     }
 
     if(Array.isArray(staff)){
@@ -1720,6 +1999,12 @@ const Sync = {
   pushLists, pushDelivery, pushStage, pushSettings, nextSerial,
   exportAll, restore,
   switchTab,
+  ensureReportRange,
+  getReportClosedLists: () => [...S.reportClosedLists.values()],
+  getReportSummaries: () => [...S.reportSummaries.values()],
+  isReportLoading: () => S.reportLoading,
+  hasReportRulesWarn: () => S.reportRulesWarn,
+  fetchPurgeTargets,
   purgeCompletedLists,
   purgeOldAuditLogs,
   setAuditEnabled(en){ S.enableAudit = !!en; },
