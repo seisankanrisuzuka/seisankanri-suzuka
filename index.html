@@ -429,8 +429,8 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261121e"></script>
-  <script src="sync.js?v=20261121e"></script>
+  <script src="firebase-config.js?v=20261121j"></script>
+  <script src="sync.js?v=20261121j"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -522,7 +522,7 @@ body.on-stage .arch-toggle span{display:none}
 <div class="panel"><h2>積み込み一覧</h2><div id="loadTable" class="tablewrap"></div></div>
 </section>
 <section id="delivery" class="page">
-<div class="panel" id="deliveryBoardPanel"><h2>配達表</h2><p class="help">編集できるのは「備考」「伝票番号」「売上番号」です。備考は元のリストと連動します。伝票番号・売上番号は配達表だけに保存されます。その他の項目は元のリストから自動表示されます。行の順番・メモは配達表専用で保存されます。</p><div class="stage-toolbar no-print"><button class="btn small" id="addDeliveryMemoBtn">メモ行を追加</button><button class="btn small teal" id="printDeliveryBtn">配達表を印刷</button><span class="help dl-legend">製造状況：灰＝未開始 青＝開始 緑＝完了（切断・バンドソー・キリ穴・ショット・開先・曲げ）</span></div><div id="deliveryBoardTable" class="tablewrap"></div></div>
+<div class="panel" id="deliveryBoardPanel"><h2>配達表</h2><p class="help">編集できるのは「備考」「伝票番号」「売上番号」です。備考は元のリストと連動します。伝票番号・売上番号は配達表だけに保存されます。その他の項目は元のリストから自動表示されます。行の順番・メモは配達表専用で保存されます。</p><div class="stage-toolbar no-print"><button class="btn small" id="addDeliveryMemoBtn">メモ行を追加</button><label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155">日付<input type="date" id="deliveryTitleDate" style="width:auto;padding:3px 6px;font-size:11px"></label><label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155">拠点<select id="deliveryTitleSite" style="width:auto;padding:3px 6px;font-size:11px"><option value="本社">本社</option><option value="亀山">亀山</option></select></label><button class="btn small secondary" id="printDeliveryBtn">配達表を印刷</button><button class="btn small teal" id="exportDeliveryXlsxBtn">配達表をエクセル出力</button><span id="deliveryXlsxMsg" class="help"></span><span class="help dl-legend">製造状況：灰＝未開始 青＝開始 緑＝完了（切断・バンドソー・キリ穴・ショット・開先・曲げ）</span></div><div id="deliveryBoardTable" class="tablewrap"></div></div>
 <details class="panel no-print" id="eventDetails"><summary>配送イベント登録（タップで開く）</summary><p class="help">外注先からの持ち込み、客先への納品などを登録できます。</p><div class="row"><div class="field"><label>日付</label><input id="eventDate" type="date"></div><div class="field"><label>需要家</label><input id="eventCustomer" placeholder="需要家"></div></div><div class="row"><div class="field"><label>工事名</label><input id="eventJob" placeholder="工事名"></div><div class="field"><label>訪問先</label><input id="eventDestination" placeholder="訪問先"></div></div><div class="row"><div class="field"><label>伝票番号</label><input id="eventSlip" placeholder="伝票番号"></div><div class="field"><label>売上番号</label><input id="eventSales" placeholder="売上番号"></div></div><div class="row"><div class="field"><label>備考</label><input id="eventNote" placeholder="備考"></div></div><div class="btn-bar"><button class="btn" id="addEventBtn">イベント登録</button></div><div id="eventMsg" class="help"></div></details>
 <div class="panel print-only" style="display:none"><h2>配達表</h2><div id="deliveryPrintTable"></div></div>
 </section>
@@ -535,7 +535,7 @@ body.on-stage .arch-toggle span{display:none}
 <div class="panel"><h2>日報（工程の完了日ごと）</h2>
 <p class="help">選んだ日に「完了」になった工程を、工程ごとに、材質・板厚別の枚数と重量で集計します。切断は切断方法ごとに分けます（バンドソー工程は載せません）。完了日は、各工程の完了ボタンを押したときに入力した日付です。</p>
 <div class="row no-print"><div class="field"><label>完了日</label><input id="reportDate" type="date"></div></div>
-<div class="btn-bar no-print"><button class="btn secondary" type="button" id="reportToday">今日</button><button class="btn secondary" type="button" id="reportRefreshBtn">最新データに更新</button><button class="btn teal" type="button" id="reportPrint">印刷</button></div>
+<div class="btn-bar no-print"><button class="btn secondary" type="button" id="reportToday">今日</button><button class="btn secondary" type="button" id="reportRefreshBtn">最新データに更新</button><button class="btn teal" type="button" id="reportPrint">エクセル出力</button><span id="reportDayMsg" class="help"></span></div>
 <div id="reportSyncStatus" class="help no-print" style="margin-top:6px"></div>
 <div id="reportBody" style="margin-top:10px"></div></div>
 <div class="panel no-print" id="reportChartPanel">
@@ -711,6 +711,7 @@ function mfgBadge(l,compact){if(l.fullyOutsourced)return '<span class="badge pur
 function processStatusChips(l,compact){if(l.fullyOutsourced)return"";const ps=(l.processes||[]).map(normalizeProcessName).filter(p=>PROCESSES.includes(p)).sort((a,b)=>PROCESSES.indexOf(a)-PROCESSES.indexOf(b));if(!ps.length)return"";return `<div class="pchips">${ps.map(p=>{const st=processDone(l,p)?"done":(l.processStatus?.[p]==="started"?"started":"pending");const lb={pending:"未開始",started:"開始",done:"完了"}[st];const nm=p==="キリ"?"キリ穴":esc(p);const ab={"切断":"切","バンドソー":"バ","キリ":"穴","ショット":"シ","開先":"開","曲げ":"曲"}[p]||nm.slice(0,1);return compact?`<span class="pchip p-${st}" title="${nm}：${lb}">${ab}</span>`:`<span class="pchip p-${st}">${nm}：${lb}</span>`}).join("")}</div>`}
 /* 配達表の印刷用：登録されている全工程を状態つきで並べる */
 function printProcessList(l){if(l.fullyOutsourced)return"全工程外注";const ab={"切断":"切","バンドソー":"バ","キリ":"穴","ショット":"シ","開先":"開","曲げ":"曲"};const ps=(l.processes||[]).map(normalizeProcessName).filter(p=>PROCESSES.includes(p)).sort((a,b)=>PROCESSES.indexOf(a)-PROCESSES.indexOf(b));return ps.map(p=>`<span class="pp">${ab[p]}</span>`).join(" ")}
+function printProcessText(l){if(l.fullyOutsourced)return"全工程外注";const ab={"切断":"切","バンドソー":"バ","キリ":"穴","ショット":"シ","開先":"開","曲げ":"曲"};const ps=(l.processes||[]).map(normalizeProcessName).filter(p=>PROCESSES.includes(p)).sort((a,b)=>PROCESSES.indexOf(a)-PROCESSES.indexOf(b));return ps.map(p=>ab[p]).join(" ")||"－"}
 /* 積み込み完了後の「翌日以降は非表示」 */
 const SHOW_ARCH_KEY="factory_link_show_archived_v1";let showArchived=false;try{showArchived=localStorage.getItem(SHOW_ARCH_KEY)==="1"}catch(e){}
 /* 工程の完了日（完了ボタンで入力。未入力の古いデータは、完了を押した日時から補う） */
@@ -1095,7 +1096,7 @@ $("importCsvBtn").onclick=async()=>{
  }
  save();
  const serialBadgesHtml=importedSerials.map(x=>`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 0;border-bottom:1px solid #dcfce7"><span style="display:inline-block;padding:2px 8px;border-radius:6px;background:#1d4ed8;color:#fff;font-weight:800;font-size:13px;letter-spacing:.03em">${esc(x.serial)}</span><span style="font-weight:700;color:#0f172a">${esc(x.name)}</span><span style="font-size:11px;padding:1px 6px;border-radius:4px;background:${x.mode==="新規"?"#dcfce7":"#fef3c7"};color:${x.mode==="新規"?"#166534":"#92400e"};font-weight:700">${esc(x.mode)}</span></div>`).join("");
- $("registerMsg").innerHTML=`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 12px;color:#166534"><div style="font-weight:700;font-size:13px;margin-bottom:4px">取込完了：${pendingCsvFiles.length}ファイル、部材 ${rowsCount}行（新規 ${added}リスト ／ 更新 ${updated}リスト${skipped?` ／ スキップ ${skipped}件`:""}）</div>${importedSerials.length?`<div style="margin:6px 0">${serialBadgesHtml}</div>`:""}<div style="font-size:11px;color:#15803d">※ D列「残数」は無視し、総重量は個数×角重量で計算します。</div></div>`;
+ $("registerMsg").innerHTML=`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 12px;color:#166534"><div style="font-weight:700;font-size:13px;margin-bottom:4px">取込完了：${pendingCsvFiles.length}ファイル、部材 ${rowsCount}行（新規 ${added}リスト ／ 更新 ${updated}リスト${skipped?` ／ スキップ ${skipped}件`:""}）</div>${importedSerials.length?`<div style="margin:6px 0">${serialBadgesHtml}</div>`:""}</div>`;
  pendingCsvFiles=[];renderHoleEntryForms();$("csvFile").value="";
  if(added+updated>0)showRegisterResultModal(`登録完了しました（新規 ${added}リスト、更新 ${updated}リスト）`,importedSerials);
 };
@@ -1208,7 +1209,7 @@ function refreshEventSelect(){const el=$("eventJobSelect");if(!el)return;el.inne
 function addDeliveryEvent(){const serialRef="",date=$("eventDate").value,type="",customer=$("eventCustomer").value.trim(),job=$("eventJob").value.trim(),slip=$("eventSlip").value.trim(),sales=$("eventSales").value.trim(),destination=$("eventDestination").value.trim(),note=$("eventNote").value.trim();if(!date||!destination){$("eventMsg").textContent="日付と訪問先を入力してください。";return}const eventRegKey="factory_link_event_seq_v1";let reg={next:1,issued:[],retired:[]};try{reg={...reg,...JSON.parse(localStorage.getItem(eventRegKey)||"{}")} }catch(e){}reg.issued=Array.isArray(reg.issued)?reg.issued.map(String):[];reg.retired=Array.isArray(reg.retired)?reg.retired.map(String):[];let eventId;do{eventId=String(reg.next++).padStart(8,"0");if(eventId.length>8)throw new Error("配送イベント番号の採番上限に達しました")}while(reg.issued.includes(eventId)||reg.retired.includes(eventId)||deliveryEvents.some(x=>String(x.id)===eventId));reg.issued.push(eventId);localStorage.setItem(eventRegKey,JSON.stringify(reg));deliveryEvents.push({id:eventId,serial:serialRef,date,type,customer,job,destination,note,createdAt:new Date().toISOString()});if(slip||sales)deliveryMeta["E:"+eventId]={slip,sales};persistDelivery();["eventCustomer","eventJob","eventDestination","eventSlip","eventSales","eventNote"].forEach(id=>$(id).value="");$("eventMsg").textContent="配送イベントを登録しました。";renderDeliveryBoard()}
 /* 配達表の並び：納期（日付）の早い順 → 同じ納期の中で同じ納入先を連続させる。メモ行は今の行位置に残し、それ以外を並び替えて空いた位置に入れる */
 function deliveryAutoSort(board,byKey){const items=board.filter(x=>x.memo===undefined&&byKey.has(x.key));const dk=x=>String(x.date||"9999-99-99"),dest=x=>String(x.destination||"").trim();items.sort((a,b)=>{const A=byKey.get(a.key),B=byKey.get(b.key);return dk(A).localeCompare(dk(B))||dest(A).localeCompare(dest(B),"ja")||(A.type===B.type?0:A.type==="list"?-1:1)||String(A.serial||A.key).localeCompare(String(B.serial||B.key))});let k=0;return board.map(x=>x.memo===undefined&&byKey.has(x.key)?items[k++]:x)}
-function deliveryEntries(){let base=activeLists().map(l=>({key:"L:"+l.serial,type:"list",serial:l.serial,date:dueStart(l),customer:l.customer||"",job:l.job||"",destination:l.destination||"",dateLabel:dueLabel(l),cut:cutLabel(l),qty:total(l,"qty"),procPrint:printProcessList(l),mfg:mfgBadge(l,true)+processStatusChips(l,true),weight:total(l,"weight"),maxSize:maxSizeLabel(l),slip:(deliveryMeta["L:"+l.serial]||{}).slip||"",sales:(deliveryMeta["L:"+l.serial]||{}).sales||"",note:l.deliveryNote!==undefined?l.deliveryNote:longSizeNote(l),method:l.deliveryMethod||""})).concat(deliveryEvents.map(e=>({key:"E:"+e.id,type:"event",event:e,serial:e.serial,date:e.date,dateLabel:shortDate(e.date)||"－",customer:e.customer||"",job:e.job||e.type||(lists.find(l=>l.serial===e.serial)?.job||""),destination:e.destination,cut:"－",qty:"",weight:"",maxSize:"－",slip:(deliveryMeta["E:"+e.id]||{}).slip||"",sales:(deliveryMeta["E:"+e.id]||{}).sales||"",note:e.note||"",method:e.type})));let byKey=new Map(base.map(x=>[x.key,x]));let known=new Set(deliveryBoard.filter(x=>x.key).map(x=>x.key));base.filter(x=>!known.has(x.key)).sort((a,b)=>String(a.date||"9999").localeCompare(String(b.date||"9999"))).forEach(x=>deliveryBoard.push({key:x.key}));deliveryBoard=deliveryBoard.filter(x=>x.memo!==undefined||byKey.has(x.key));deliveryBoard=deliveryAutoSort(deliveryBoard,byKey);return deliveryBoard.map(x=>x.memo!==undefined?x:byKey.get(x.key))}
+function deliveryEntries(){let base=activeLists().map(l=>({key:"L:"+l.serial,type:"list",serial:l.serial,date:dueStart(l),customer:l.customer||"",job:l.job||"",destination:l.destination||"",dateLabel:dueLabel(l),cut:cutLabel(l),qty:total(l,"qty"),procPrint:printProcessList(l),procText:printProcessText(l),mfg:mfgBadge(l,true)+processStatusChips(l,true),weight:total(l,"weight"),maxSize:maxSizeLabel(l),slip:(deliveryMeta["L:"+l.serial]||{}).slip||"",sales:(deliveryMeta["L:"+l.serial]||{}).sales||"",note:l.deliveryNote!==undefined?l.deliveryNote:longSizeNote(l),method:l.deliveryMethod||""})).concat(deliveryEvents.map(e=>({key:"E:"+e.id,type:"event",event:e,serial:e.serial,date:e.date,dateLabel:shortDate(e.date)||"－",customer:e.customer||"",job:e.job||e.type||(lists.find(l=>l.serial===e.serial)?.job||""),destination:e.destination,cut:"－",qty:"",weight:"",maxSize:"－",slip:(deliveryMeta["E:"+e.id]||{}).slip||"",sales:(deliveryMeta["E:"+e.id]||{}).sales||"",note:e.note||"",method:e.type})));let byKey=new Map(base.map(x=>[x.key,x]));let known=new Set(deliveryBoard.filter(x=>x.key).map(x=>x.key));base.filter(x=>!known.has(x.key)).sort((a,b)=>String(a.date||"9999").localeCompare(String(b.date||"9999"))).forEach(x=>deliveryBoard.push({key:x.key}));deliveryBoard=deliveryBoard.filter(x=>x.memo!==undefined||byKey.has(x.key));deliveryBoard=deliveryAutoSort(deliveryBoard,byKey);return deliveryBoard.map(x=>x.memo!==undefined?x:byKey.get(x.key))}
 function moveDelivery(index,delta){let j=index+delta;if(j<0||j>=deliveryBoard.length)return;[deliveryBoard[index],deliveryBoard[j]]=[deliveryBoard[j],deliveryBoard[index]];persistDelivery();renderDeliveryBoard()}
 function addDeliveryMemo(){let text=prompt("配達表に挿入するメモを入力してください");if(text===null)return;let pos=prompt(`挿入位置を入力してください（1〜${deliveryBoard.length+1}、空欄なら最後）`,String(deliveryBoard.length+1));if(pos===null)return;let index=pos.trim()===""?deliveryBoard.length:Math.max(0,Math.min(deliveryBoard.length,Number(pos)-1));deliveryBoard.splice(index,0,{key:"M:"+Date.now()+Math.floor(Math.random()*1000),memo:text});persistDelivery();renderDeliveryBoard()}
 function deleteDeliveryMemo(key){if(!confirm("このメモを削除しますか？"))return;deliveryBoard=deliveryBoard.filter(x=>!(x.memo!==undefined&&x.key===key));persistDelivery();renderDeliveryBoard()}
@@ -1224,9 +1225,125 @@ $("deliverySearchBtn").onclick=renderDeliverySearch;["deliveryStart","deliveryEn
 /* 印刷の向きを一時的に切り替える（空文字なら既定のまま） */
 function setPrintPage(size){let st=document.getElementById("printPageStyle");if(!size){st&&st.remove();return}if(!st){st=document.createElement("style");st.id="printPageStyle";document.head.appendChild(st)}st.textContent=`@page{size:${size};margin:10mm}`}
 function deliveryPrintEntries(){return deliveryEntries()}
-function printDelivery(){const entries=deliveryPrintEntries();const rows=entries.map(x=>{if(x.memo!==undefined)return `<tr><td colspan="13"><b>${esc(x.memo)}</b></td></tr>`;const isList=x.type==="list";const maxs=isList?String(x.maxSize||"－").replace(/^最大サイズ\s*/,""):"";return `<tr><td>${esc(x.dateLabel||x.date||"")}</td><td>${esc(isList?x.serial:(x.serial||""))}</td><td>${esc(x.customer||"")}</td><td>${esc(x.job||"")}</td><td>${esc(x.destination||"")}</td><td>${isList?esc(x.cut||""):""}</td><td>${isList?fmt(x.qty)+" 枚":""}</td><td>${isList?fmt(x.weight)+" kg":""}</td><td>${esc(maxs)}</td><td>${esc(x.slip||"")}</td><td>${esc(x.sales||"")}</td><td class="note-col">${esc(x.note||"")}</td><td class="proc-col">${isList?(x.procPrint||"－"):"－"}</td></tr>`}).join("");let area=document.getElementById("deliveryPrintArea");if(!area){area=document.createElement("div");area.id="deliveryPrintArea";document.body.appendChild(area)}area.innerHTML=`<h1>配達表</h1><div class="print-meta">印刷日：${new Date().toLocaleDateString("ja-JP")}　件数：${entries.length}件</div><table><thead><tr><th>納期・日付</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先・訪問先</th><th>切断方法</th><th>枚数</th><th>角重量</th><th>最大サイズ</th><th>伝票番号</th><th>売上番号</th><th class="note-col">備考</th><th class="proc-col">工程</th></tr></thead><tbody>${rows||'<tr><td colspan="13">対象データはありません</td></tr>'}</tbody></table>`;setPrintPage("A4 landscape");document.body.dataset.printMode="delivery";document.title="配達表";window.print()}
-window.printDelivery=printDelivery;const BASE_TITLE="生産管理システム | 生産・配送管理";window.addEventListener("afterprint",()=>{setPrintPage("");delete document.body.dataset.printMode;document.title=BASE_TITLE});
-$("printDeliveryBtn").onclick=printDelivery;
+const DELIVERY_SITE_KEY="factory_link_delivery_site_v1";
+{
+ const dtEl=$("deliveryTitleDate"),stEl=$("deliveryTitleSite");
+ if(dtEl&&!dtEl.value)dtEl.value=todayStr();
+ if(stEl){
+  try{const saved=localStorage.getItem(DELIVERY_SITE_KEY);if(saved==="本社"||saved==="亀山")stEl.value=saved;}catch(e){}
+  stEl.addEventListener("change",()=>{try{localStorage.setItem(DELIVERY_SITE_KEY,stEl.value)}catch(e){}});
+ }
+}
+function deliveryDocTitle(){
+ const dateRaw=$("deliveryTitleDate")?.value||todayStr();
+ const dateSlash=dateRaw.replace(/-/g,"/");
+ const site=$("deliveryTitleSite")?.value||"本社";
+ return {dateRaw,dateSlash,site,title:`${dateSlash} ${site}　配達表`};
+}
+function printDelivery(){
+ const entries=deliveryPrintEntries();
+ const {title}=deliveryDocTitle();
+ let sumQty=0,sumW=0,listRowCount=0;
+ const bodyRows=entries.map(x=>{
+  if(x.memo!==undefined)return `<tr class="memo-print"><td colspan="13" style="background:#fef9c3!important;font-weight:700">${esc(x.memo)}</td></tr>`;
+  const isList=x.type==="list";
+  const maxs=isList?String(x.maxSize||"－").replace(/^最大サイズ\s*/,""):"";
+  if(isList){sumQty+=num(x.qty);sumW+=Math.round(num(x.weight)*10)/10;listRowCount++;}
+  return `<tr><td>${esc(x.dateLabel||x.date||"")}</td><td>${esc(isList?x.serial:(x.serial||""))}</td><td>${esc(x.customer||"")}</td><td>${esc(x.job||"")}</td><td>${esc(x.destination||"")}</td><td>${esc(isList?(x.cut||""):"")}</td><td>${isList?fmt(x.qty)+" 枚":""}</td><td>${isList?fmt(Math.round(num(x.weight)*10)/10)+" kg":""}</td><td>${esc(maxs)}</td><td>${esc(x.slip||"")}</td><td>${esc(x.sales||"")}</td><td>${esc(x.note||"")}</td><td class="proc-col">${isList?(x.procPrint||"－"):"－"}</td></tr>`;
+ }).join("");
+ const totRow=listRowCount>0?`<tr style="background:#eff6ff!important;font-weight:700"><td colspan="6">合計</td><td>${fmt(sumQty)} 枚</td><td>${fmt(Math.round(sumW*10)/10)} kg</td><td colspan="5"></td></tr>`:"";
+ let area=document.getElementById("deliveryPrintArea");
+ if(!area){area=document.createElement("div");area.id="deliveryPrintArea";document.body.appendChild(area);}
+ area.innerHTML=`<h1>${esc(title)}</h1><div class="print-meta">出力日：${esc(todayStr().replace(/-/g,"/"))}　／　件数：${entries.length}件</div><table><thead><tr><th>納期</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先</th><th>切断方法</th><th>枚数</th><th>角重量</th><th>最大サイズ</th><th>伝票番号</th><th>売上番号</th><th>備考</th><th>工程</th></tr></thead><tbody>${(bodyRows+totRow)||'<tr><td colspan="13">対象データはありません</td></tr>'}</tbody></table>`;
+ setPrintPage("A4 landscape");document.body.dataset.printMode="delivery";document.title=title;window.print();
+}
+function exportDeliveryExcel(){
+ const entries=deliveryPrintEntries();
+ const today=todayStr();
+ const {dateRaw,site,title}=deliveryDocTitle();
+ const headers=["納期・日付","工程番号","需要家","工事名","納入先・訪問先","切断方法","枚数","角重量(kg)","最大サイズ","伝票番号","売上番号","備考","工程"];
+ const colWidths=[10.5,9.5,14,22,18,9.5,8,11,13,11,11,22,11];
+ const rows=[
+  {r:1,ht:24,cells:[{c:1,t:"s",v:title,st:1}]},
+  {r:2,ht:18,cells:[{c:1,t:"s",v:`出力日：${today.replace(/-/g,"/")}　｜　拠点：${site}　｜　件数：${entries.length}件`,st:2}]},
+  {r:3,ht:22,cells:headers.map((h,i)=>({c:i+1,t:"s",v:h,st:3}))}
+ ];
+ const merges=[];
+ let curRow=4,sumQty=0,sumW=0,listRowCount=0;
+ if(!entries.length){
+  rows.push({r:curRow,ht:22,cells:headers.map((_,i)=>i===0?{c:1,t:"s",v:"対象データはありません",st:4}:{c:i+1,t:"b",st:4})});
+  merges.push(`A${curRow}:M${curRow}`);
+  curRow++;
+ }else{
+  const dataStart=curRow;
+  entries.forEach(x=>{
+   if(x.memo!==undefined){
+    const text=String(x.memo||"");
+    const ht=Math.max(20,Math.ceil(xlsxTextWidth(text)/90)*15+6);
+    rows.push({r:curRow,ht,cells:headers.map((_,i)=>i===0?{c:1,t:"s",v:text,st:12}:{c:i+1,t:"b",st:12})});
+    merges.push(`A${curRow}:M${curRow}`);
+    curRow++;
+    return;
+   }
+   const isList=x.type==="list";
+   const maxs=isList?String(x.maxSize||"－").replace(/^最大サイズ\s*/,""):"";
+   const qtyVal=isList?num(x.qty):null;
+   const wVal=isList?Math.round(num(x.weight)*10)/10:null;
+   if(isList){sumQty+=qtyVal;sumW+=wVal;listRowCount++;}
+   const dateTxt=x.dateLabel||x.date||"";
+   const serialTxt=isList?x.serial:(x.serial||"");
+   const custTxt=x.customer||"";
+   const jobTxt=x.job||"";
+   const destTxt=x.destination||"";
+   const cutTxt=isList?(x.cut||""):"";
+   const slipTxt=x.slip||"";
+   const salesTxt=x.sales||"";
+   const noteTxt=x.note||"";
+   const procTxt=isList?(x.procText||"－"):"－";
+   const lines=Math.max(1,Math.ceil(xlsxTextWidth(custTxt)/12),Math.ceil(xlsxTextWidth(jobTxt)/20),Math.ceil(xlsxTextWidth(destTxt)/16),Math.ceil(xlsxTextWidth(noteTxt)/20));
+   const ht=Math.max(19,lines*14+5);
+   const cells=[
+    {c:1,t:"s",v:dateTxt,st:4},
+    {c:2,t:"s",v:serialTxt,st:4},
+    {c:3,t:"s",v:custTxt,st:10},
+    {c:4,t:"s",v:jobTxt,st:10},
+    {c:5,t:"s",v:destTxt,st:10},
+    {c:6,t:"s",v:cutTxt,st:4},
+    isList?{c:7,t:"n",v:qtyVal,st:5}:{c:7,t:"b",st:4},
+    isList?{c:8,t:"n",v:wVal,st:6}:{c:8,t:"b",st:4},
+    {c:9,t:"s",v:maxs,st:4},
+    {c:10,t:"s",v:slipTxt,st:4},
+    {c:11,t:"s",v:salesTxt,st:4},
+    {c:12,t:"s",v:noteTxt,st:10},
+    {c:13,t:"s",v:procTxt,st:4}
+   ];
+   rows.push({r:curRow,ht,cells});
+   colWidths[0]=Math.max(colWidths[0],Math.min(18,Math.ceil(xlsxTextWidth(dateTxt)+1.5)));
+   colWidths[1]=Math.max(colWidths[1],Math.min(14,Math.ceil(xlsxTextWidth(serialTxt)+1.5)));
+   colWidths[8]=Math.max(colWidths[8],Math.min(18,Math.ceil(xlsxTextWidth(maxs)+1.5)));
+   colWidths[9]=Math.max(colWidths[9],Math.min(18,Math.ceil(xlsxTextWidth(slipTxt)+1.5)));
+   colWidths[10]=Math.max(colWidths[10],Math.min(18,Math.ceil(xlsxTextWidth(salesTxt)+1.5)));
+   colWidths[12]=Math.max(colWidths[12],Math.min(18,Math.ceil(xlsxTextWidth(procTxt)+1.5)));
+   curRow++;
+  });
+  if(listRowCount>0){
+   const dataEnd=curRow-1;
+   sumW=Math.round(sumW*10)/10;
+   rows.push({r:curRow,ht:20,cells:headers.map((_,i)=>{
+    if(i===0)return{c:1,t:"s",v:"合計",st:7};
+    if(i===6)return{c:7,t:"f",f:`SUM(G${dataStart}:G${dataEnd})`,v:sumQty,st:8};
+    if(i===7)return{c:8,t:"f",f:`SUM(H${dataStart}:H${dataEnd})`,v:sumW,st:9};
+    return{c:i+1,t:"b",st:7};
+   })});
+   merges.push(`A${curRow}:F${curRow}`);
+  }
+ }
+ const bytes=xlsxBuildTableWorkbook([{sheetName:"配達表",colWidths,rows,merges,landscape:true}]);
+ xlsxDownloadBytes(bytes,`haitatsuhyo_${dateRaw}_${site}.xlsx`);
+ const msg=$("deliveryXlsxMsg");if(msg)msg.textContent=`${title} をエクセル出力しました（${entries.length}件）`;
+}
+window.exportDeliveryExcel=exportDeliveryExcel;window.printDelivery=printDelivery;const BASE_TITLE="生産管理システム | 生産・配送管理";window.addEventListener("afterprint",()=>{setPrintPage("");delete document.body.dataset.printMode;document.title=BASE_TITLE});
+$("printDeliveryBtn").onclick=printDelivery;$("exportDeliveryXlsxBtn").onclick=exportDeliveryExcel;
 $("dashFilter").onchange=renderDash;$("dashSearch").oninput=renderDash;$("planRefresh").onclick=renderPlan;
 function downloadBackup(filename){let reg=null;try{reg=JSON.parse(localStorage.getItem(SERIAL_KEY)||"null")}catch(e){}let blob=new Blob([JSON.stringify({format:"production-backup-v2",lists,deliveryBoard,deliveryEvents,deliveryMeta,stageBoard,serialRegistry:reg,cutSpeeds},null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(a.href)},1500)}
 $("exportBtn").onclick=async()=>{
@@ -1469,9 +1586,9 @@ function mergeSummaryEntryToBucket(b,e){
 function reportBucketTable(title,b,totalLabel){
  const rows=Object.values(b.mats).sort((a,b2)=>a.mat.localeCompare(b2.mat,"ja")||((a.t===null||a.t===""?1e9:Number(a.t))-(b2.t===null||b2.t===""?1e9:Number(b2.t))));
  const q=rows.reduce((a,r)=>a+r.qty,0),w=rows.reduce((a,r)=>a+r.w,0);
- return {q,w,html:`<h3 class="rep-title">${esc(title)}<span class="help" style="margin-left:8px">${b.cnt}件</span></h3>${table(["材質","板厚","枚数","重量"],[...rows.map(r=>`<tr><td>${esc(r.mat)}</td><td>${r.t===null||r.t===""?"板厚未設定":esc(r.t)+"mm"}</td><td>${fmt(r.qty)}枚</td><td>${fmt(Math.round(r.w*10)/10)} kg</td></tr>`),`<tr style="background:#f1f5f9"><td colspan="2"><b>${esc(totalLabel||title+" 合計")}</b></td><td><b>${fmt(q)}枚</b></td><td><b>${fmt(Math.round(w*10)/10)} kg</b></td></tr>`])}`};
+ return {q,w,rows,html:`<h3 class="rep-title">${esc(title)}<span class="help" style="margin-left:8px">${b.cnt}件</span></h3>${table(["材質","板厚","枚数","重量"],[...rows.map(r=>`<tr><td>${esc(r.mat)}</td><td>${r.t===null||r.t===""?"板厚未設定":esc(r.t)+"mm"}</td><td>${fmt(r.qty)}枚</td><td>${fmt(Math.round(r.w*10)/10)} kg</td></tr>`),`<tr style="background:#f1f5f9"><td colspan="2"><b>${esc(totalLabel||title+" 合計")}</b></td><td><b>${fmt(q)}枚</b></td><td><b>${fmt(Math.round(w*10)/10)} kg</b></td></tr>`])}`};
 }
-function buildReportHtml(date){
+function collectReportDaySections(date){
  const by={};
  const ensureB=(p,sub)=>{by[p]=by[p]||{};return by[p][sub]=by[p][sub]||{cnt:0,mats:{}};};
  reportAllLists().forEach(l=>{
@@ -1492,12 +1609,35 @@ function buildReportHtml(date){
    }
   });
  });
- let html="",gq=0,gw=0,any=false;
- PROCESSES.forEach(p=>{if(!by[p])return;any=true;const label=p==="キリ"?"キリ穴":p;
-  if(p==="切断"){const subs=Object.keys(by[p]).sort((a,b)=>(a==="未指定")-(b==="未指定")||a.localeCompare(b,"ja"));let pq=0,pw=0;html+=`<div class="rep-proc">`;subs.forEach(sub=>{const r=reportBucketTable(`切断-${sub}`,by[p][sub],`切断-${sub} 小計`);pq+=r.q;pw+=r.w;html+=r.html});html+=`<div class="rep-total">切断 合計：<b>${fmt(pq)}枚</b>／<b>${fmt(Math.round(pw*10)/10)} kg</b></div></div>`;gq+=pq;gw+=pw}
-  else{const r=reportBucketTable(label,by[p][""],`${label} 合計`);html+=`<div class="rep-proc">${r.html}</div>`;gq+=r.q;gw+=r.w}});
- if(!any)return '<div class="empty">この日に完了した工程はありません</div>';
- return html;
+ const sections=[];
+ PROCESSES.forEach(p=>{
+  if(!by[p])return;
+  const label=p==="キリ"?"キリ穴":p;
+  if(p==="切断"){
+   const subs=Object.keys(by[p]).sort((a,b)=>(a==="未指定")-(b==="未指定")||a.localeCompare(b,"ja"));
+   let pq=0,pw=0;const subItems=[];
+   subs.forEach(sub=>{
+    const r=reportBucketTable(`切断-${sub}`,by[p][sub],`切断-${sub} 小計`);
+    pq+=r.q;pw+=r.w;
+    subItems.push({title:`切断-${sub}`,totalLabel:`切断-${sub} 小計`,cnt:by[p][sub].cnt,rows:r.rows,q:r.q,w:r.w,html:r.html});
+   });
+   sections.push({proc:p,isCut:true,subItems,q:pq,w:pw});
+  }else{
+   const r=reportBucketTable(label,by[p][""],`${label} 合計`);
+   sections.push({proc:p,isCut:false,title:label,totalLabel:`${label} 合計`,cnt:by[p][""].cnt,rows:r.rows,q:r.q,w:r.w,html:r.html});
+  }
+ });
+ return sections;
+}
+function buildReportHtml(date){
+ const sections=collectReportDaySections(date);
+ if(!sections.length)return '<div class="empty">この日に完了した工程はありません</div>';
+ return sections.map(sec=>{
+  if(sec.isCut){
+   return `<div class="rep-proc">${sec.subItems.map(s=>s.html).join("")}<div class="rep-total">切断 合計：<b>${fmt(sec.q)}枚</b>／<b>${fmt(Math.round(sec.w*10)/10)} kg</b></div></div>`;
+  }
+  return `<div class="rep-proc">${sec.html}</div>`;
+ }).join("");
 }
 function updateReportSyncStatus(){
  const st=$("reportSyncStatus");if(!st)return;
@@ -1517,9 +1657,80 @@ function renderReport(){
  el.innerHTML=buildReportHtml(date);
  renderReportCharts();
 }
-$("reportDate").value=todayStr();$("reportDate").addEventListener("input",renderReport);$("reportToday").addEventListener("click",()=>{$("reportDate").value=todayStr();renderReport()});
+$("reportDate").value=todayStr();$("reportDate").addEventListener("input",()=>{const m=$("reportDayMsg");if(m)m.textContent="";renderReport()});$("reportToday").addEventListener("click",()=>{const m=$("reportDayMsg");if(m)m.textContent="";$("reportDate").value=todayStr();renderReport()});
 $("reportRefreshBtn").addEventListener("click",()=>syncReportRange(true));
-$("reportPrint").addEventListener("click",()=>{const date=$("reportDate").value||todayStr();let area=document.getElementById("reportPrintArea");if(!area){area=document.createElement("div");area.id="reportPrintArea";document.body.appendChild(area)}area.innerHTML=`<h1>日報（${esc(date.replace(/-/g,"/"))} 完了分）</h1>${buildReportHtml(date)}`;setPrintPage("");document.body.dataset.printMode="report";document.title="日報";window.print()});
+async function exportDailyReportExcel(){
+ const date=$("reportDate")?.value||todayStr();
+ const msgEl=$("reportDayMsg");
+ if(window.Sync&&window.Sync.on&&window.Sync.ensureReportRange){
+  if(msgEl)msgEl.textContent="データを読み込み中...";
+  try{await window.Sync.ensureReportRange(date,date,false)}catch(e){}
+  updateReportSyncStatus();
+ }
+ const sections=collectReportDaySections(date);
+ if(!sections.length){if(msgEl)msgEl.textContent="この日に完了した工程はありません。";return}
+ const gq=sections.reduce((a,s)=>a+s.q,0),gw=Math.round(sections.reduce((a,s)=>a+s.w,0)*10)/10;
+ const colWidths=[22,12,13,15];
+ const rows=[
+  {r:1,ht:24,cells:[{c:1,t:"s",v:`日報（${date.replace(/-/g,"/")} 完了分）`,st:1}]},
+  {r:2,ht:18,cells:[{c:1,t:"s",v:`完了日：${date.replace(/-/g,"/")}　｜　合計枚数：${fmt(gq)}枚　｜　合計重量：${fmt(gw)} kg`,st:2}]}
+ ];
+ const merges=[];
+ let curRow=4;
+ const addBlock=(title,items,totalLabel)=>{
+  rows.push({r:curRow,ht:20,cells:[{c:1,t:"s",v:title,st:11},{c:2,t:"b",st:11},{c:3,t:"b",st:11},{c:4,t:"b",st:11}]});
+  merges.push(`A${curRow}:D${curRow}`);
+  curRow++;
+  rows.push({r:curRow,ht:20,cells:["材質","板厚","枚数(枚)","重量(kg)"].map((h,i)=>({c:i+1,t:"s",v:h,st:3}))});
+  curRow++;
+  const startR=curRow;
+  let sq=0,sw=0;
+  items.forEach(item=>{
+   const thk=item.t===null||item.t===""?"板厚未設定":`${item.t}mm`;
+   const w=Math.round(num(item.w)*10)/10;
+   sq+=num(item.qty);sw+=w;
+   colWidths[0]=Math.max(colWidths[0],Math.min(34,Math.ceil(xlsxTextWidth(item.mat)+2)));
+   colWidths[1]=Math.max(colWidths[1],Math.min(18,Math.ceil(xlsxTextWidth(thk)+2)));
+   rows.push({r:curRow,ht:18,cells:[{c:1,t:"s",v:item.mat,st:10},{c:2,t:"s",v:thk,st:4},{c:3,t:"n",v:num(item.qty),st:5},{c:4,t:"n",v:w,st:6}]});
+   curRow++;
+  });
+  const endR=curRow-1;
+  sw=Math.round(sw*10)/10;
+  const totR=curRow;
+  rows.push({r:totR,ht:19,cells:[
+   {c:1,t:"s",v:totalLabel,st:13},
+   {c:2,t:"b",st:13},
+   items.length?{c:3,t:"f",f:`SUM(C${startR}:C${endR})`,v:sq,st:8}:{c:3,t:"n",v:0,st:8},
+   items.length?{c:4,t:"f",f:`SUM(D${startR}:D${endR})`,v:sw,st:9}:{c:4,t:"n",v:0,st:9}
+  ]});
+  merges.push(`A${totR}:B${totR}`);
+  curRow+=2;
+  return totR;
+ };
+ sections.forEach(sec=>{
+  if(sec.isCut){
+   const subRows=sec.subItems.map(sub=>addBlock(sub.title,sub.rows,sub.totalLabel));
+   if(subRows.length>1){
+    const cutTotR=curRow-1;
+    const sumW=Math.round(sec.w*10)/10;
+    rows.push({r:cutTotR,ht:20,cells:[
+     {c:1,t:"s",v:"切断 合計",st:13},
+     {c:2,t:"b",st:13},
+     {c:3,t:"f",f:subRows.map(r=>`C${r}`).join("+"),v:sec.q,st:8},
+     {c:4,t:"f",f:subRows.map(r=>`D${r}`).join("+"),v:sumW,st:9}
+    ]});
+    merges.push(`A${cutTotR}:B${cutTotR}`);
+    curRow=cutTotR+2;
+   }
+  }else{
+   addBlock(sec.title,sec.rows,sec.totalLabel);
+  }
+ });
+ const bytes=xlsxBuildTableWorkbook([{sheetName:"日報",colWidths,rows,merges,landscape:false}]);
+ xlsxDownloadBytes(bytes,`nippo_${date}.xlsx`);
+ if(msgEl)msgEl.textContent=`日報エクセル（${date.replace(/-/g,"/")}）を出力しました。`;
+}
+$("reportPrint").addEventListener("click",exportDailyReportExcel);
 
 /* ===== 日報 複合グラフ ===== */
 let reportChartMode="day";
@@ -1538,7 +1749,7 @@ function buildReportBuckets(start,end,mode){
   let guard=0;
   while((sy<ey||(sy===ey&&sm<=em))&&guard++<120){
    const k=`${sy}-${String(sm).padStart(2,"0")}`;
-   out.push({key:k,label:`${sy}年${sm}月`,short:`${String(sy).slice(2)}/${sm}`});
+   out.push({key:k,label:`${sy}年${sm}月`,short:`${String(sy).slice(2)}/${sm}`,noYear:`${sm}月`});
    if(++sm>12){sm=1;sy++}
   }
   return out;
@@ -1758,6 +1969,162 @@ function xlsxSafeSheetName(raw,used){
  used.add(name);
  return name;
 }
+function xlsxColName(n){
+ let s="";
+ while(n>0){const r=(n-1)%26;s=String.fromCharCode(65+r)+s;n=Math.floor((n-1)/26);}
+ return s;
+}
+function xlsxTextWidth(str){
+ let w=0;
+ for(const ch of String(str??""))w+=/[\x00-\x7F]/.test(ch)?0.92:1.72;
+ return w;
+}
+function xlsxStylesXml(){
+ return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.0"/></numFmts>
+<fonts count="6">
+<font><sz val="9"/><color rgb="FF0F172A"/><name val="Yu Gothic UI"/></font>
+<font><b/><sz val="13"/><color rgb="FF1E3A8A"/><name val="Yu Gothic UI"/></font>
+<font><sz val="10"/><color rgb="FF475569"/><name val="Yu Gothic UI"/></font>
+<font><b/><sz val="9"/><color rgb="FFFFFFFF"/><name val="Yu Gothic UI"/></font>
+<font><b/><sz val="9"/><color rgb="FF0F172A"/><name val="Yu Gothic UI"/></font>
+<font><b/><sz val="10"/><color rgb="FF0F172A"/><name val="Yu Gothic UI"/></font>
+</fonts>
+<fills count="6">
+<fill><patternFill patternType="none"/></fill>
+<fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF1E3A8A"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFEFF6FF"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFFEF3C7"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFE2E8F0"/></patternFill></fill>
+</fills>
+<borders count="2">
+<border><left/><right/><top/><bottom/><diagonal/></border>
+<border><left style="thin"><color rgb="FFCBD5E1"/></left><right style="thin"><color rgb="FFCBD5E1"/></right><top style="thin"><color rgb="FFCBD5E1"/></top><bottom style="thin"><color rgb="FFCBD5E1"/></bottom><diagonal/></border>
+</borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="14">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="0" fontId="4" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="3" fontId="4" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="164" fontId="4" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="5" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+<xf numFmtId="0" fontId="4" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="4" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+</cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+<dxfs count="0"/>
+<tableStyles count="0" defaultTableStyle="TableStyleMedium2" defaultPivotStyle="PivotStyleLight16"/>
+</styleSheet>`;
+}
+function xlsxDownloadBytes(bytes,filename){
+ const blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+ const a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);
+ a.download=filename;
+ document.body.appendChild(a);a.click();
+ setTimeout(()=>{a.remove();URL.revokeObjectURL(a.href)},1500);
+}
+function xlsxBuildTableWorkbook(sheets){
+ const strings=[],strMap=new Map();
+ const strIdx=s=>{
+  const v=String(s??"");
+  if(strMap.has(v))return strMap.get(v);
+  const idx=strings.length;strings.push(v);strMap.set(v,idx);return idx;
+ };
+ const files=[],ctOverrides=[],wbSheets=[],wbRels=[];
+ const usedNames=new Set();
+
+ sheets.forEach((sh,i)=>{
+  const idx=i+1,sName=xlsxSafeSheetName(sh.sheetName,usedNames);
+  const colWidths=sh.colWidths||[14];
+  const maxCol=Math.max(colWidths.length,1);
+  const maxColLet=xlsxColName(maxCol);
+  const maxRow=sh.rows.length?Math.max(...sh.rows.map(r=>r.r)):1;
+  const rowsXml=sh.rows.map(row=>{
+   const cellsXml=row.cells.slice().sort((a,b)=>a.c-b.c).map(cell=>{
+    const ref=xlsxColName(cell.c)+row.r;
+    if(cell.t==="s")return `<c r="${ref}" s="${cell.st}" t="s"><v>${strIdx(cell.v)}</v></c>`;
+    if(cell.t==="n")return `<c r="${ref}" s="${cell.st}"><v>${Number(cell.v)||0}</v></c>`;
+    if(cell.t==="f")return `<c r="${ref}" s="${cell.st}"><f>${xlsxEsc(cell.f)}</f><v>${Number(cell.v)||0}</v></c>`;
+    return `<c r="${ref}" s="${cell.st}"/>`;
+   }).join("");
+   return `<row r="${row.r}" ht="${row.ht||18}" customHeight="1">${cellsXml}</row>`;
+  }).join("");
+  const colsXml=colWidths.map((w,ci)=>`<col min="${ci+1}" max="${ci+1}" width="${w}" customWidth="1"/>`).join("");
+  const merges=(sh.merges||[]);
+  const mergesXml=merges.length?`<mergeCells count="${merges.length}">${merges.map(m=>`<mergeCell ref="${m}"/>`).join("")}</mergeCells>`:"";
+  const sheetPrXml=sh.landscape?`<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>`:"";
+  const pageSetupXml=sh.landscape?`<pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>`:`<pageSetup paperSize="9" orientation="portrait"/>`;
+
+  const sheetXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+${sheetPrXml}
+<dimension ref="A1:${maxColLet}${maxRow}"/>
+<sheetViews><sheetView${idx===1?' tabSelected="1"':''} workbookViewId="0"/></sheetViews>
+<sheetFormatPr defaultRowHeight="18"/>
+<cols>${colsXml}</cols>
+<sheetData>${rowsXml}</sheetData>
+${mergesXml}
+<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.25" footer="0.25"/>
+${pageSetupXml}
+</worksheet>`;
+
+  files.push({name:`xl/worksheets/sheet${idx}.xml`,data:sheetXml});
+  ctOverrides.push(`<Override PartName="/xl/worksheets/sheet${idx}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`);
+  wbSheets.push(`<sheet name="${xlsxEsc(sName)}" sheetId="${idx}" r:id="rId${idx}"/>`);
+  wbRels.push(`<Relationship Id="rId${idx}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${idx}.xml"/>`);
+ });
+
+ const stRelId=sheets.length+1,ssRelId=sheets.length+2;
+ wbRels.push(`<Relationship Id="rId${stRelId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`);
+ wbRels.push(`<Relationship Id="rId${ssRelId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>`);
+
+ const contentTypesXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+${ctOverrides.join("")}
+</Types>`;
+ const rootRelsXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+ const workbookXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<bookViews><workbookView xWindow="0" yWindow="0" windowWidth="24000" windowHeight="15000"/></bookViews>
+<sheets>${wbSheets.join("")}</sheets>
+</workbook>`;
+ const wbRelsXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/relationships">
+${wbRels.join("")}
+</Relationships>`;
+ const ssXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${strings.length}" uniqueCount="${strings.length}">
+${strings.map(s=>`<si><t${/^\s|\s$/.test(s)?' xml:space="preserve"':''}>${xlsxEsc(s)}</t></si>`).join("")}
+</sst>`;
+
+ files.push(
+  {name:"[Content_Types].xml",data:contentTypesXml},
+  {name:"_rels/.rels",data:rootRelsXml},
+  {name:"xl/workbook.xml",data:workbookXml},
+  {name:"xl/_rels/workbook.xml.rels",data:wbRelsXml},
+  {name:"xl/styles.xml",data:xlsxStylesXml()},
+  {name:"xl/sharedStrings.xml",data:ssXml}
+ );
+ return xlsxBuildZip(files);
+}
 function xlsxBuildComboWorkbook(sheets){
  const strings=[],strMap=new Map();
  const strIdx=s=>{
@@ -1773,24 +2140,55 @@ function xlsxBuildComboWorkbook(sheets){
 
  sheets.forEach((sh,i)=>{
   const idx=i+1,sName=xlsxSafeSheetName(sh.sheetName,usedNames),qSheet=`'${sName.replace(/'/g,"''")}'`;
-  const hdrRow=23,startRow=24,endRow=startRow+sh.pts.length-1,totRow=endRow+1;
-  const sumCnt=sh.pts.reduce((a,p)=>a+p.cnt,0),sumQty=sh.pts.reduce((a,p)=>a+p.qty,0),sumW=Math.round(sh.pts.reduce((a,p)=>a+p.w,0)*10)/10;
+  const hdrRow=23,qtyRow=24,wRow=25;
+  const startCol=2,endCol=startCol+sh.pts.length-1,totCol=endCol+1;
+  const endColLet=xlsxColName(endCol),totColLet=xlsxColName(totCol);
+  const sumQty=sh.pts.reduce((a,p)=>a+p.qty,0),sumW=Math.round(sh.pts.reduce((a,p)=>a+p.w,0)*10)/10;
+  const fmtInt=v=>(Math.round(Number(v)||0)).toLocaleString("en-US");
+  const fmtDec=v=>(Number(v)||0).toLocaleString("en-US",{minimumFractionDigits:1,maximumFractionDigits:1});
+  const colWidths=[13.5];
+  let hdrCells=sCell("A"+hdrRow,sh.dateLabel,3);
+  let qtyCells=sCell("A"+qtyRow,"合計枚数(枚)",7);
+  let wCells=sCell("A"+wRow,"合計重量(kg)",7);
+  sh.pts.forEach((p,ci)=>{
+   const cLet=xlsxColName(startCol+ci);
+   hdrCells+=sCell(cLet+hdrRow,p.label,3);
+   qtyCells+=nCell(cLet+qtyRow,p.qty,5);
+   wCells+=nCell(cLet+wRow,p.w,6);
+   const mw=Math.max(xlsxTextWidth(p.label),xlsxTextWidth(fmtInt(p.qty)),xlsxTextWidth(fmtDec(p.w)));
+   colWidths.push(Math.max(5.2,Math.round((mw+1.5)*10)/10));
+  });
+  hdrCells+=sCell(totColLet+hdrRow,"合計",3);
+  qtyCells+=fCell(totColLet+qtyRow,`SUM(B${qtyRow}:${endColLet}${qtyRow})`,sumQty,8);
+  wCells+=fCell(totColLet+wRow,`SUM(B${wRow}:${endColLet}${wRow})`,sumW,9);
+  const totMw=Math.max(xlsxTextWidth("合計"),xlsxTextWidth(fmtInt(sumQty)),xlsxTextWidth(fmtDec(sumW)));
+  colWidths.push(Math.max(6.2,Math.round((totMw+1.7)*10)/10));
+
+  let chartEndCol=Math.min(totCol,36);
+  let curW=colWidths.slice(0,chartEndCol).reduce((a,b)=>a+b,0);
+  const padWidth=6;
+  while(curW<145&&chartEndCol<36){
+   chartEndCol++;
+   curW+=padWidth;
+  }
+  let colsXml=colWidths.map((w,ci)=>`<col min="${ci+1}" max="${ci+1}" width="${w}" customWidth="1"/>`).join("");
+  if(chartEndCol>totCol){
+   colsXml+=`<col min="${totCol+1}" max="${chartEndCol}" width="${padWidth}" customWidth="1"/>`;
+  }
+
   let rowsXml="";
   rowsXml+=`<row r="1" ht="24" customHeight="1">${sCell("A1",sh.title,1)}</row>`;
   rowsXml+=`<row r="2" ht="18" customHeight="1">${sCell("A2",sh.subtitle,2)}</row>`;
-  rowsXml+=`<row r="${hdrRow}" ht="22" customHeight="1">${sCell("A"+hdrRow,sh.dateLabel,3)}${sCell("B"+hdrRow,"件数",3)}${sCell("C"+hdrRow,"合計枚数(枚)",3)}${sCell("D"+hdrRow,"合計重量(kg)",3)}</row>`;
-  sh.pts.forEach((p,ri)=>{
-   const r=startRow+ri;
-   rowsXml+=`<row r="${r}" ht="18" customHeight="1">${sCell("A"+r,p.label,4)}${nCell("B"+r,p.cnt,5)}${nCell("C"+r,p.qty,5)}${nCell("D"+r,p.w,6)}</row>`;
-  });
-  rowsXml+=`<row r="${totRow}" ht="20" customHeight="1">${sCell("A"+totRow,"合計",7)}${fCell("B"+totRow,`SUM(B${startRow}:B${endRow})`,sumCnt,8)}${fCell("C"+totRow,`SUM(C${startRow}:C${endRow})`,sumQty,8)}${fCell("D"+totRow,`SUM(D${startRow}:D${endRow})`,sumW,9)}</row>`;
+  rowsXml+=`<row r="${hdrRow}" ht="20" customHeight="1">${hdrCells}</row>`;
+  rowsXml+=`<row r="${qtyRow}" ht="18" customHeight="1">${qtyCells}</row>`;
+  rowsXml+=`<row r="${wRow}" ht="18" customHeight="1">${wCells}</row>`;
 
   const sheetXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-<dimension ref="A1:D${totRow}"/>
+<dimension ref="A1:${totColLet}${wRow}"/>
 <sheetViews><sheetView${idx===1?' tabSelected="1"':''} workbookViewId="0"/></sheetViews>
 <sheetFormatPr defaultRowHeight="18"/>
-<cols><col min="1" max="1" width="16" customWidth="1"/><col min="2" max="2" width="11" customWidth="1"/><col min="3" max="3" width="15" customWidth="1"/><col min="4" max="4" width="16" customWidth="1"/><col min="5" max="8" width="12" customWidth="1"/></cols>
+<cols>${colsXml}</cols>
 <sheetData>${rowsXml}</sheetData>
 <pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>
 <drawing r:id="rId1"/>
@@ -1805,7 +2203,7 @@ function xlsxBuildComboWorkbook(sheets){
 <xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
 <xdr:twoCellAnchor editAs="oneCell">
 <xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>2</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
-<xdr:to><xdr:col>8</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>21</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
+<xdr:to><xdr:col>${chartEndCol}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>21</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
 <xdr:graphicFrame macro="">
 <xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="Chart ${idx}"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>
 <xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>
@@ -1823,9 +2221,9 @@ function xlsxBuildComboWorkbook(sheets){
   const catCache=`<c:strCache><c:ptCount val="${sh.pts.length}"/>${sh.pts.map((p,pi)=>`<c:pt idx="${pi}"><c:v>${xlsxEsc(p.label)}</c:v></c:pt>`).join("")}</c:strCache>`;
   const wCache=`<c:numCache><c:formatCode>#,##0.0</c:formatCode><c:ptCount val="${sh.pts.length}"/>${sh.pts.map((p,pi)=>`<c:pt idx="${pi}"><c:v>${p.w}</c:v></c:pt>`).join("")}</c:numCache>`;
   const qCache=`<c:numCache><c:formatCode>#,##0</c:formatCode><c:ptCount val="${sh.pts.length}"/>${sh.pts.map((p,pi)=>`<c:pt idx="${pi}"><c:v>${p.qty}</c:v></c:pt>`).join("")}</c:numCache>`;
-  const catRef=`${qSheet}!$A$${startRow}:$A$${endRow}`;
-  const wRef=`${qSheet}!$D$${startRow}:$D$${endRow}`,wTitleRef=`${qSheet}!$D$${hdrRow}`;
-  const qRef=`${qSheet}!$C$${startRow}:$C$${endRow}`,qTitleRef=`${qSheet}!$C$${hdrRow}`;
+  const catRef=`${qSheet}!$B$${hdrRow}:$${endColLet}$${hdrRow}`;
+  const wRef=`${qSheet}!$B$${wRow}:$${endColLet}$${wRow}`,wTitleRef=`${qSheet}!$A$${wRow}`;
+  const qRef=`${qSheet}!$B$${qtyRow}:$${endColLet}$${qtyRow}`,qTitleRef=`${qSheet}!$A$${qtyRow}`;
 
   const chartXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -1913,43 +2311,7 @@ ${ctOverrides.join("")}
 ${wbRels.join("")}
 </Relationships>`;
 
- const stylesXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.0"/></numFmts>
-<fonts count="5">
-<font><sz val="11"/><color rgb="FF0F172A"/><name val="Yu Gothic UI"/></font>
-<font><b/><sz val="13"/><color rgb="FF1E3A8A"/><name val="Yu Gothic UI"/></font>
-<font><sz val="10"/><color rgb="FF475569"/><name val="Yu Gothic UI"/></font>
-<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Yu Gothic UI"/></font>
-<font><b/><sz val="10"/><color rgb="FF0F172A"/><name val="Yu Gothic UI"/></font>
-</fonts>
-<fills count="4">
-<fill><patternFill patternType="none"/></fill>
-<fill><patternFill patternType="gray125"/></fill>
-<fill><patternFill patternType="solid"><fgColor rgb="FF1E3A8A"/></patternFill></fill>
-<fill><patternFill patternType="solid"><fgColor rgb="FFEFF6FF"/></patternFill></fill>
-</fills>
-<borders count="2">
-<border><left/><right/><top/><bottom/><diagonal/></border>
-<border><left style="thin"><color rgb="FFCBD5E1"/></left><right style="thin"><color rgb="FFCBD5E1"/></right><top style="thin"><color rgb="FFCBD5E1"/></top><bottom style="thin"><color rgb="FFCBD5E1"/></bottom><diagonal/></border>
-</borders>
-<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="10">
-<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
-<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>
-<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
-<xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-<xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
-<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
-<xf numFmtId="0" fontId="4" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-<xf numFmtId="3" fontId="4" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
-<xf numFmtId="164" fontId="4" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
-</cellXfs>
-<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
-<dxfs count="0"/>
-<tableStyles count="0" defaultTableStyle="TableStyleMedium2" defaultPivotStyle="PivotStyleLight16"/>
-</styleSheet>`;
+ const stylesXml=xlsxStylesXml();
 
  const ssXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${strings.length}" uniqueCount="${strings.length}">
@@ -1987,13 +2349,13 @@ async function exportReportExcel(mode){
  const dateCol=mode==="month"?"年月":"日付";
  const sheets=keys.map(k=>{
   const s=seriesMap[k];
-  const pts=buckets.map(b=>{const v=bucketTotals(s.buckets[b.key]);return {label:b.label,qty:v.qty,w:Math.round(v.w*10)/10,cnt:v.cnt}});
-  const tc=pts.reduce((a,p)=>a+p.cnt,0),tq=pts.reduce((a,p)=>a+p.qty,0),tw=Math.round(pts.reduce((a,p)=>a+p.w,0)*10)/10;
+  const pts=buckets.map(b=>{const v=bucketTotals(s.buckets[b.key]);return {label:mode==="month"?(b.noYear||b.short):b.short,qty:v.qty,w:Math.round(v.w*10)/10,cnt:v.cnt}});
+  const tq=pts.reduce((a,p)=>a+p.qty,0),tw=Math.round(pts.reduce((a,p)=>a+p.w,0)*10)/10;
   const sName=s.proc==="切断"&&s.sub==="外注"?"切断-外注(納期基準)":s.itemName;
   return {
    sheetName:sName,
    title:`${s.title}（${start.replace(/-/g,"/")} ～ ${end.replace(/-/g,"/")} / ${modeLabel}）`,
-   subtitle:`集計基準：${s.basis}　｜　合計件数：${fmt(tc)}件　｜　合計枚数：${fmt(tq)}枚　｜　合計重量：${fmt(tw)} kg`,
+   subtitle:`集計基準：${s.basis}　｜　合計枚数：${fmt(tq)}枚　｜　合計重量：${fmt(tw)} kg`,
    chartTitle:`${s.title}（${modeLabel}）`,
    dateLabel:dateCol,
    pts
