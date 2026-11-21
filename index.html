@@ -429,8 +429,8 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261121j"></script>
-  <script src="sync.js?v=20261121j"></script>
+  <script src="firebase-config.js?v=20261121k"></script>
+  <script src="sync.js?v=20261121k"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -1261,17 +1261,17 @@ function exportDeliveryExcel(){
  const entries=deliveryPrintEntries();
  const today=todayStr();
  const {dateRaw,site,title}=deliveryDocTitle();
- const headers=["納期・日付","工程番号","需要家","工事名","納入先・訪問先","切断方法","枚数","角重量(kg)","最大サイズ","伝票番号","売上番号","備考","工程"];
- const colWidths=[10.5,9.5,14,22,18,9.5,8,11,13,11,11,22,11];
+ const headers=["納期","工程番号","需要家","工事名","納入先","切断方法","枚数","角重量","最大サイズ","伝票番号","売上番号","備考","工程"];
+ const colWidths=[8.5,8.5,13,24,16.5,8.5,8,10.5,11.5,9.5,9.5,22,12];
  const rows=[
-  {r:1,ht:24,cells:[{c:1,t:"s",v:title,st:1}]},
-  {r:2,ht:18,cells:[{c:1,t:"s",v:`出力日：${today.replace(/-/g,"/")}　｜　拠点：${site}　｜　件数：${entries.length}件`,st:2}]},
-  {r:3,ht:22,cells:headers.map((h,i)=>({c:i+1,t:"s",v:h,st:3}))}
+  {r:1,ht:20,cells:[{c:1,t:"s",v:title,st:14}]},
+  {r:2,ht:13,cells:[{c:1,t:"s",v:`出力日：${today.replace(/-/g,"/")}　／　件数：${entries.length}件`,st:15}]},
+  {r:3,ht:16,cells:headers.map((h,i)=>({c:i+1,t:"s",v:h,st:(i===6||i===7)?17:16}))}
  ];
- const merges=[];
+ const merges=["A1:M1","A2:M2"];
  let curRow=4,sumQty=0,sumW=0,listRowCount=0;
  if(!entries.length){
-  rows.push({r:curRow,ht:22,cells:headers.map((_,i)=>i===0?{c:1,t:"s",v:"対象データはありません",st:4}:{c:i+1,t:"b",st:4})});
+  rows.push({r:curRow,ht:15,cells:headers.map((_,i)=>i===0?{c:1,t:"s",v:"対象データはありません",st:19}:{c:i+1,t:"b",st:19})});
   merges.push(`A${curRow}:M${curRow}`);
   curRow++;
  }else{
@@ -1279,8 +1279,9 @@ function exportDeliveryExcel(){
   entries.forEach(x=>{
    if(x.memo!==undefined){
     const text=String(x.memo||"");
-    const ht=Math.max(20,Math.ceil(xlsxTextWidth(text)/90)*15+6);
-    rows.push({r:curRow,ht,cells:headers.map((_,i)=>i===0?{c:1,t:"s",v:text,st:12}:{c:i+1,t:"b",st:12})});
+    const mLines=Math.max(1,Math.ceil(xlsxTextWidth(text)/145));
+    const ht=Math.max(14,Math.round((mLines*10.2+3)*10)/10);
+    rows.push({r:curRow,ht,cells:headers.map((_,i)=>i===0?{c:1,t:"s",v:text,st:22}:{c:i+1,t:"b",st:22})});
     merges.push(`A${curRow}:M${curRow}`);
     curRow++;
     return;
@@ -1300,45 +1301,52 @@ function exportDeliveryExcel(){
    const salesTxt=x.sales||"";
    const noteTxt=x.note||"";
    const procTxt=isList?(x.procText||"－"):"－";
-   const lines=Math.max(1,Math.ceil(xlsxTextWidth(custTxt)/12),Math.ceil(xlsxTextWidth(jobTxt)/20),Math.ceil(xlsxTextWidth(destTxt)/16),Math.ceil(xlsxTextWidth(noteTxt)/20));
-   const ht=Math.max(19,lines*14+5);
+   colWidths[0]=Math.max(colWidths[0],Math.min(13,Math.ceil(xlsxTextWidth(dateTxt)*0.85+1)));
+   colWidths[1]=Math.max(colWidths[1],Math.min(11,Math.ceil(xlsxTextWidth(serialTxt)*0.85+1)));
+   colWidths[6]=Math.max(colWidths[6],Math.min(12,Math.ceil(xlsxTextWidth(isList?fmt(qtyVal)+" 枚":"")*0.85+1)));
+   colWidths[7]=Math.max(colWidths[7],Math.min(14,Math.ceil(xlsxTextWidth(isList?fmt(wVal)+" kg":"")*0.85+1)));
+   colWidths[8]=Math.max(colWidths[8],Math.min(14,Math.ceil(xlsxTextWidth(maxs)*0.85+1)));
+   colWidths[9]=Math.max(colWidths[9],Math.min(13,Math.ceil(xlsxTextWidth(slipTxt)*0.85+1)));
+   colWidths[10]=Math.max(colWidths[10],Math.min(13,Math.ceil(xlsxTextWidth(salesTxt)*0.85+1)));
+   const lines=Math.max(1,
+    Math.ceil(xlsxTextWidth(custTxt)/(colWidths[2]*1.05)),
+    Math.ceil(xlsxTextWidth(jobTxt)/(colWidths[3]*1.05)),
+    Math.ceil(xlsxTextWidth(destTxt)/(colWidths[4]*1.05)),
+    Math.ceil(xlsxTextWidth(noteTxt)/(colWidths[11]*1.05)),
+    Math.ceil(xlsxTextWidth(procTxt)/(colWidths[12]*1.05))
+   );
+   const ht=Math.max(13.5,Math.round((lines*10.2+3)*10)/10);
    const cells=[
-    {c:1,t:"s",v:dateTxt,st:4},
-    {c:2,t:"s",v:serialTxt,st:4},
-    {c:3,t:"s",v:custTxt,st:10},
-    {c:4,t:"s",v:jobTxt,st:10},
-    {c:5,t:"s",v:destTxt,st:10},
-    {c:6,t:"s",v:cutTxt,st:4},
-    isList?{c:7,t:"n",v:qtyVal,st:5}:{c:7,t:"b",st:4},
-    isList?{c:8,t:"n",v:wVal,st:6}:{c:8,t:"b",st:4},
-    {c:9,t:"s",v:maxs,st:4},
-    {c:10,t:"s",v:slipTxt,st:4},
-    {c:11,t:"s",v:salesTxt,st:4},
-    {c:12,t:"s",v:noteTxt,st:10},
-    {c:13,t:"s",v:procTxt,st:4}
+    {c:1,t:"s",v:dateTxt,st:19},
+    {c:2,t:"s",v:serialTxt,st:19},
+    {c:3,t:"s",v:custTxt,st:18},
+    {c:4,t:"s",v:jobTxt,st:18},
+    {c:5,t:"s",v:destTxt,st:18},
+    {c:6,t:"s",v:cutTxt,st:19},
+    isList?{c:7,t:"n",v:qtyVal,st:20}:{c:7,t:"b",st:19},
+    isList?{c:8,t:"n",v:wVal,st:21}:{c:8,t:"b",st:19},
+    {c:9,t:"s",v:maxs,st:19},
+    {c:10,t:"s",v:slipTxt,st:19},
+    {c:11,t:"s",v:salesTxt,st:19},
+    {c:12,t:"s",v:noteTxt,st:18},
+    {c:13,t:"s",v:procTxt,st:19}
    ];
    rows.push({r:curRow,ht,cells});
-   colWidths[0]=Math.max(colWidths[0],Math.min(18,Math.ceil(xlsxTextWidth(dateTxt)+1.5)));
-   colWidths[1]=Math.max(colWidths[1],Math.min(14,Math.ceil(xlsxTextWidth(serialTxt)+1.5)));
-   colWidths[8]=Math.max(colWidths[8],Math.min(18,Math.ceil(xlsxTextWidth(maxs)+1.5)));
-   colWidths[9]=Math.max(colWidths[9],Math.min(18,Math.ceil(xlsxTextWidth(slipTxt)+1.5)));
-   colWidths[10]=Math.max(colWidths[10],Math.min(18,Math.ceil(xlsxTextWidth(salesTxt)+1.5)));
-   colWidths[12]=Math.max(colWidths[12],Math.min(18,Math.ceil(xlsxTextWidth(procTxt)+1.5)));
    curRow++;
   });
   if(listRowCount>0){
    const dataEnd=curRow-1;
    sumW=Math.round(sumW*10)/10;
-   rows.push({r:curRow,ht:20,cells:headers.map((_,i)=>{
-    if(i===0)return{c:1,t:"s",v:"合計",st:7};
-    if(i===6)return{c:7,t:"f",f:`SUM(G${dataStart}:G${dataEnd})`,v:sumQty,st:8};
-    if(i===7)return{c:8,t:"f",f:`SUM(H${dataStart}:H${dataEnd})`,v:sumW,st:9};
-    return{c:i+1,t:"b",st:7};
+   rows.push({r:curRow,ht:16,cells:headers.map((_,i)=>{
+    if(i===0)return{c:1,t:"s",v:"合計",st:23};
+    if(i===6)return{c:7,t:"f",f:`SUM(G${dataStart}:G${dataEnd})`,v:sumQty,st:24};
+    if(i===7)return{c:8,t:"f",f:`SUM(H${dataStart}:H${dataEnd})`,v:sumW,st:25};
+    return{c:i+1,t:"b",st:23};
    })});
    merges.push(`A${curRow}:F${curRow}`);
   }
  }
- const bytes=xlsxBuildTableWorkbook([{sheetName:"配達表",colWidths,rows,merges,landscape:true}]);
+ const bytes=xlsxBuildTableWorkbook([{sheetName:"配達表",colWidths,rows,merges,landscape:true,compactMargins:true}]);
  xlsxDownloadBytes(bytes,`haitatsuhyo_${dateRaw}_${site}.xlsx`);
  const msg=$("deliveryXlsxMsg");if(msg)msg.textContent=`${title} をエクセル出力しました（${entries.length}件）`;
 }
@@ -1982,29 +1990,40 @@ function xlsxTextWidth(str){
 function xlsxStylesXml(){
  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.0"/></numFmts>
-<fonts count="6">
+<numFmts count="3">
+<numFmt numFmtId="164" formatCode="#,##0.0"/>
+<numFmt numFmtId="165" formatCode="#,##0&quot; 枚&quot;"/>
+<numFmt numFmtId="166" formatCode="#,##0.0&quot; kg&quot;"/>
+</numFmts>
+<fonts count="10">
 <font><sz val="9"/><color rgb="FF0F172A"/><name val="Yu Gothic UI"/></font>
 <font><b/><sz val="13"/><color rgb="FF1E3A8A"/><name val="Yu Gothic UI"/></font>
 <font><sz val="10"/><color rgb="FF475569"/><name val="Yu Gothic UI"/></font>
 <font><b/><sz val="9"/><color rgb="FFFFFFFF"/><name val="Yu Gothic UI"/></font>
 <font><b/><sz val="9"/><color rgb="FF0F172A"/><name val="Yu Gothic UI"/></font>
 <font><b/><sz val="10"/><color rgb="FF0F172A"/><name val="Yu Gothic UI"/></font>
+<font><b/><sz val="12"/><color rgb="FF000000"/><name val="Yu Gothic UI"/></font>
+<font><sz val="8"/><color rgb="FF334155"/><name val="Yu Gothic UI"/></font>
+<font><sz val="8"/><color rgb="FF000000"/><name val="Yu Gothic UI"/></font>
+<font><b/><sz val="8"/><color rgb="FF000000"/><name val="Yu Gothic UI"/></font>
 </fonts>
-<fills count="6">
+<fills count="8">
 <fill><patternFill patternType="none"/></fill>
 <fill><patternFill patternType="gray125"/></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FF1E3A8A"/></patternFill></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFEFF6FF"/></patternFill></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFFEF3C7"/></patternFill></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFE2E8F0"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFE8E8E8"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFFEF9C3"/></patternFill></fill>
 </fills>
-<borders count="2">
+<borders count="3">
 <border><left/><right/><top/><bottom/><diagonal/></border>
 <border><left style="thin"><color rgb="FFCBD5E1"/></left><right style="thin"><color rgb="FFCBD5E1"/></right><top style="thin"><color rgb="FFCBD5E1"/></top><bottom style="thin"><color rgb="FFCBD5E1"/></bottom><diagonal/></border>
+<border><left style="thin"><color rgb="FF64748B"/></left><right style="thin"><color rgb="FF64748B"/></right><top style="thin"><color rgb="FF64748B"/></top><bottom style="thin"><color rgb="FF64748B"/></bottom><diagonal/></border>
 </borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="14">
+<cellXfs count="26">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>
 <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
@@ -2019,6 +2038,18 @@ function xlsxStylesXml(){
 <xf numFmtId="0" fontId="5" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
 <xf numFmtId="0" fontId="4" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="4" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+<xf numFmtId="0" fontId="6" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="7" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="0" fontId="9" fillId="6" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="9" fillId="6" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="0" fontId="8" fillId="0" borderId="2" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="8" fillId="0" borderId="2" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top" wrapText="1"/></xf>
+<xf numFmtId="165" fontId="8" fillId="0" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf>
+<xf numFmtId="166" fontId="8" fillId="0" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf>
+<xf numFmtId="0" fontId="9" fillId="7" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="9" fillId="3" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+<xf numFmtId="165" fontId="9" fillId="3" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="166" fontId="9" fillId="3" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 <dxfs count="0"/>
@@ -2064,17 +2095,18 @@ function xlsxBuildTableWorkbook(sheets){
   const mergesXml=merges.length?`<mergeCells count="${merges.length}">${merges.map(m=>`<mergeCell ref="${m}"/>`).join("")}</mergeCells>`:"";
   const sheetPrXml=sh.landscape?`<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>`:"";
   const pageSetupXml=sh.landscape?`<pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>`:`<pageSetup paperSize="9" orientation="portrait"/>`;
+  const marginsXml=sh.compactMargins?`<pageMargins left="0.35" right="0.35" top="0.38" bottom="0.38" header="0.2" footer="0.2"/>`:`<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.25" footer="0.25"/>`;
 
   const sheetXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
 ${sheetPrXml}
 <dimension ref="A1:${maxColLet}${maxRow}"/>
 <sheetViews><sheetView${idx===1?' tabSelected="1"':''} workbookViewId="0"/></sheetViews>
-<sheetFormatPr defaultRowHeight="18"/>
+<sheetFormatPr defaultRowHeight="${sh.compactMargins?13.5:18}"/>
 <cols>${colsXml}</cols>
 <sheetData>${rowsXml}</sheetData>
 ${mergesXml}
-<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.25" footer="0.25"/>
+${marginsXml}
 ${pageSetupXml}
 </worksheet>`;
 
