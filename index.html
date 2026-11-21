@@ -86,21 +86,28 @@ details{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin
  #deliveryPrintArea th,#deliveryPrintArea td{border:0.2mm solid #555!important;padding:0.7mm 0.8mm!important;vertical-align:top!important;white-space:normal!important;word-break:break-all;overflow-wrap:anywhere;font-size:7.5pt!important}
  #deliveryPrintArea th{background:#e8e8e8!important;position:static!important;color:#000!important;word-break:keep-all!important;overflow-wrap:normal}
  #deliveryPrintArea tr{break-inside:avoid!important;page-break-inside:avoid!important}
- #deliveryPrintArea th:nth-child(1){width:5.5%}
+ #deliveryPrintArea th:nth-child(1){width:5.2%}
  #deliveryPrintArea th:nth-child(2){width:5.5%}
- #deliveryPrintArea th:nth-child(3){width:8%}
- #deliveryPrintArea th:nth-child(4){width:14.5%}
- #deliveryPrintArea th:nth-child(5){width:10%}
- #deliveryPrintArea th:nth-child(6){width:5.5%}
- #deliveryPrintArea th:nth-child(7){width:4.5%;text-align:right}
- #deliveryPrintArea th:nth-child(8){width:6.5%;text-align:right}
- #deliveryPrintArea th:nth-child(9){width:7%}
- #deliveryPrintArea th:nth-child(10){width:6%}
- #deliveryPrintArea th:nth-child(11){width:6%}
- #deliveryPrintArea th:nth-child(12){width:13.5%}
- #deliveryPrintArea th:nth-child(13){width:7.5%}
- #deliveryPrintArea td:nth-child(7),#deliveryPrintArea td:nth-child(8){text-align:right;white-space:nowrap!important;word-break:keep-all!important}
- #deliveryPrintArea td:nth-child(1),#deliveryPrintArea td:nth-child(2),#deliveryPrintArea td:nth-child(9){white-space:nowrap!important;word-break:keep-all!important}
+ #deliveryPrintArea th:nth-child(3){width:7.8%}
+ #deliveryPrintArea th:nth-child(4){width:14%}
+ #deliveryPrintArea th:nth-child(5){width:9.5%}
+ #deliveryPrintArea th:nth-child(6){width:4.5%;text-align:right}
+ #deliveryPrintArea th:nth-child(7){width:6.2%;text-align:right}
+ #deliveryPrintArea th:nth-child(8){width:6.2%;text-align:right}
+ #deliveryPrintArea th:nth-child(9){width:6.8%}
+ #deliveryPrintArea th:nth-child(10){width:5.5%}
+ #deliveryPrintArea th:nth-child(11){width:5.5%}
+ #deliveryPrintArea th:nth-child(12){width:13.3%}
+ #deliveryPrintArea th:nth-child(13){width:3%;text-align:center}
+ #deliveryPrintArea th:nth-child(14){width:7%}
+ #deliveryPrintArea td.num{text-align:right;white-space:nowrap!important;word-break:keep-all!important}
+ #deliveryPrintArea td.nw{white-space:nowrap!important;word-break:keep-all!important}
+ #deliveryPrintArea td.gwt{text-align:right;vertical-align:middle!important;white-space:nowrap!important;word-break:keep-all!important;font-weight:700;background:#eff6ff!important}
+ #deliveryPrintArea td.grp-left{border-left:0.6mm solid #000!important}
+ #deliveryPrintArea td.grp-top{border-top:0.6mm solid #000!important}
+ #deliveryPrintArea td.grp-bot{border-bottom:0.6mm solid #000!important}
+ #deliveryPrintArea td.grp-gwt{border-top:0.6mm solid #000!important;border-right:0.6mm solid #000!important;border-bottom:0.6mm solid #000!important}
+ #deliveryPrintArea td.cut-col{text-align:center;white-space:nowrap!important;word-break:keep-all!important}
  #deliveryPrintArea .proc-col{white-space:normal!important;word-break:keep-all!important}
  #deliveryPrintArea .proc-col .pp{display:inline-block;white-space:nowrap;margin-right:3px}
 }
@@ -212,27 +219,37 @@ body.on-stage main{padding:4px 8px}
 .dl-table td.dl-mfg .pchip{padding:0 5px;font-size:10.5px}
 .dl-table td.dl-serial .badge{padding:1px 6px;font-size:10.5px}
 .dl-table tr.memo-row td{padding:3px 5px}
+.dl-table td.dl-gwt{text-align:right;vertical-align:middle;white-space:nowrap;font-weight:700;color:#1e3a8a;background:#eff6ff}
+.dl-table td.dl-gwt:empty{background:transparent;font-weight:400}
+.dl-table td.grp-left{border-left:2px solid #0f172a}
+.dl-table td.grp-top{border-top:2px solid #0f172a}
+.dl-table td.grp-bot{border-bottom:2px solid #0f172a}
+.dl-table td.grp-gwt{border-top:2px solid #0f172a;border-right:2px solid #0f172a;border-bottom:2px solid #0f172a}
+.dl-table td.dl-cut{text-align:center}
 @media(max-width:760px){
  .dl-table{display:block}
  .dl-table thead{display:none}
  .dl-table tbody{display:block}
  .dl-table tr.drag-row{display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr;gap:2px 6px;align-items:center;padding:4px 2px;border-bottom:1px solid #e5eaf0}
  .dl-table tr.drag-row td{padding:0;border:0;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px;max-width:none!important;width:auto!important}
- .dl-table td.dl-mv{grid-column:1;grid-row:1/5}
+ .dl-table td.dl-mv{grid-column:1;grid-row:1/6}
  .dl-table .dl-moves{flex-direction:column}
  .dl-table .dl-moves .btn{width:28px;height:16px;padding:0;font-size:10px}
  .dl-table td.dl-date{grid-column:2;grid-row:1;font-weight:700}
  .dl-table td.dl-serial{grid-column:3;grid-row:1}
  .dl-table td.dl-max{grid-column:4;grid-row:1;text-align:right}
  .dl-table td.dl-wt{grid-column:5;grid-row:1;text-align:right}
- .dl-table td.dl-mfg{grid-column:2/6;grid-row:2;white-space:normal;overflow:visible}
+ .dl-table td.dl-mfg{grid-column:2/5;grid-row:2;white-space:normal;overflow:visible}
  .dl-table td.dl-mfg .pchips{display:inline-flex;flex-wrap:wrap;margin:0 0 0 4px}
+ .dl-table td.dl-qty{grid-column:5;grid-row:2;text-align:right}
  .dl-table td.dl-cust{grid-column:2;grid-row:3;color:#475569}
  .dl-table td.dl-job{grid-column:3/5;grid-row:3;color:#475569}
  .dl-table td.dl-dest{grid-column:5;grid-row:3;color:#475569}
  .dl-table td.dl-slip{grid-column:2;grid-row:4}
  .dl-table td.dl-sales{grid-column:3;grid-row:4}
  .dl-table td.dl-note{grid-column:4/6;grid-row:4}
+ .dl-table td.dl-gwt{grid-column:2/6;grid-row:5;text-align:right;background:transparent;padding-top:1px}
+ .dl-table td.dl-gwt:empty{display:none}
  .dl-table .dl-cust input,.dl-table .dl-job input,.dl-table .dl-dest input,.dl-table .dl-date input{min-width:0!important}
  .dl-table tr.memo-row{display:flex;align-items:center;gap:6px;padding:3px 2px;border-bottom:1px solid #e5eaf0}
  .dl-table tr.memo-row td{flex:1;padding:0}
@@ -244,10 +261,6 @@ body.on-stage main{padding:4px 8px}
 .dl-table td.dl-mfg{text-align:left}
 .dl-table td.dl-mfg .pchips{margin:0 0 0 2px}
 .dl-table td.dl-qty{text-align:right}
-@media(max-width:760px){
- .dl-table td.dl-mfg{grid-column:2/5;grid-row:2}
- .dl-table td.dl-qty{grid-column:5;grid-row:2;text-align:right}
-}
 
 .dl-table td.dl-date{position:relative}
 .dl-table .dl-date input.dl-datepick{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer;min-width:0!important;padding:0;border:0}
@@ -429,8 +442,8 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261121k"></script>
-  <script src="sync.js?v=20261121k"></script>
+  <script src="firebase-config.js?v=20261121o"></script>
+  <script src="sync.js?v=20261121o"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -522,8 +535,8 @@ body.on-stage .arch-toggle span{display:none}
 <div class="panel"><h2>積み込み一覧</h2><div id="loadTable" class="tablewrap"></div></div>
 </section>
 <section id="delivery" class="page">
-<div class="panel" id="deliveryBoardPanel"><h2>配達表</h2><p class="help">編集できるのは「備考」「伝票番号」「売上番号」です。備考は元のリストと連動します。伝票番号・売上番号は配達表だけに保存されます。その他の項目は元のリストから自動表示されます。行の順番・メモは配達表専用で保存されます。</p><div class="stage-toolbar no-print"><button class="btn small" id="addDeliveryMemoBtn">メモ行を追加</button><label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155">日付<input type="date" id="deliveryTitleDate" style="width:auto;padding:3px 6px;font-size:11px"></label><label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155">拠点<select id="deliveryTitleSite" style="width:auto;padding:3px 6px;font-size:11px"><option value="本社">本社</option><option value="亀山">亀山</option></select></label><button class="btn small secondary" id="printDeliveryBtn">配達表を印刷</button><button class="btn small teal" id="exportDeliveryXlsxBtn">配達表をエクセル出力</button><span id="deliveryXlsxMsg" class="help"></span><span class="help dl-legend">製造状況：灰＝未開始 青＝開始 緑＝完了（切断・バンドソー・キリ穴・ショット・開先・曲げ）</span></div><div id="deliveryBoardTable" class="tablewrap"></div></div>
-<details class="panel no-print" id="eventDetails"><summary>配送イベント登録（タップで開く）</summary><p class="help">外注先からの持ち込み、客先への納品などを登録できます。</p><div class="row"><div class="field"><label>日付</label><input id="eventDate" type="date"></div><div class="field"><label>需要家</label><input id="eventCustomer" placeholder="需要家"></div></div><div class="row"><div class="field"><label>工事名</label><input id="eventJob" placeholder="工事名"></div><div class="field"><label>訪問先</label><input id="eventDestination" placeholder="訪問先"></div></div><div class="row"><div class="field"><label>伝票番号</label><input id="eventSlip" placeholder="伝票番号"></div><div class="field"><label>売上番号</label><input id="eventSales" placeholder="売上番号"></div></div><div class="row"><div class="field"><label>備考</label><input id="eventNote" placeholder="備考"></div></div><div class="btn-bar"><button class="btn" id="addEventBtn">イベント登録</button></div><div id="eventMsg" class="help"></div></details>
+<div class="panel" id="deliveryBoardPanel"><h2>配達表</h2><p class="help">編集できるのは「備考」「登録番号」「伝票番号」です。備考は元のリストと連動します。登録番号・伝票番号は配達表だけに保存されます。その他の項目は元のリストから自動表示されます。行の順番・メモは配達表専用で保存されます。</p><div class="stage-toolbar no-print"><button class="btn small" id="addDeliveryMemoBtn">メモ行を追加</button><label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155">日付<input type="date" id="deliveryTitleDate" style="width:auto;padding:3px 6px;font-size:11px"></label><label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155">拠点<select id="deliveryTitleSite" style="width:auto;padding:3px 6px;font-size:11px"><option value="本社">本社</option><option value="亀山">亀山</option></select></label><button class="btn small secondary" id="printDeliveryBtn">配達表を印刷</button><button class="btn small teal" id="exportDeliveryXlsxBtn">配達表をエクセル出力</button><span id="deliveryXlsxMsg" class="help"></span><span class="help dl-legend">製造状況：灰＝未開始 青＝開始 緑＝完了（切断・バンドソー・キリ穴・ショット・開先・曲げ）</span></div><div id="deliveryBoardTable" class="tablewrap"></div></div>
+<details class="panel no-print" id="eventDetails"><summary>配送イベント登録（タップで開く）</summary><p class="help">外注先からの持ち込み、客先への納品などを登録できます。</p><div class="row"><div class="field"><label>日付</label><input id="eventDate" type="date"></div><div class="field"><label>需要家</label><input id="eventCustomer" placeholder="需要家"></div></div><div class="row"><div class="field"><label>工事名</label><input id="eventJob" placeholder="工事名"></div><div class="field"><label>訪問先</label><input id="eventDestination" placeholder="訪問先"></div></div><div class="row"><div class="field"><label>登録番号</label><input id="eventSlip" placeholder="登録番号"></div><div class="field"><label>伝票番号</label><input id="eventSales" placeholder="伝票番号"></div></div><div class="row"><div class="field"><label>備考</label><input id="eventNote" placeholder="備考"></div></div><div class="btn-bar"><button class="btn" id="addEventBtn">イベント登録</button></div><div id="eventMsg" class="help"></div></details>
 <div class="panel print-only" style="display:none"><h2>配達表</h2><div id="deliveryPrintTable"></div></div>
 </section>
 <section id="delivery-search" class="page">
@@ -1154,7 +1167,7 @@ $('saveManualListBtn').addEventListener('click',async()=>{
 
 $("exportCsvBtn").onclick=()=>{
  const head=["工程番号","納期","納期終了日","配送方法","工事名","納入先","必要工程","合計穴数","穴径","部品名","枚数","板厚","材質","角重量合計","工程状態","工程作業日","完成山数","積込済山数",
-  "需要家","備考","切断方法","総枚数","最大サイズ(mm)","山ID","積込履歴","伝票番号","売上番号","部品番号","横寸法","縦寸法","切断長さ","罫書き長さ","角重量(単位)","実重量","残数"];
+  "需要家","備考","切断方法","総枚数","最大サイズ(mm)","山ID","積込履歴","登録番号","伝票番号","部品番号","横寸法","縦寸法","切断長さ","罫書き長さ","角重量(単位)","実重量","残数"];
  const out=[head];
  const exStart=$("exportDueStart").value,exEnd=$("exportDueEnd").value;const exList=exportCsvLists();
  if(!exList.length){$("exportCsvMsg").textContent="指定した納期に該当するリストがありません。";return}
@@ -1190,7 +1203,7 @@ $("loadSearchBtn").onclick=renderLoad;["loadDueStart","loadDueEnd","loadDestSear
 // 配達表専用の順序・メモ・編集データ
 let deliveryBoard=[];try{deliveryBoard=JSON.parse(localStorage.getItem(DELIVERY_BOARD_KEY)||"[]")}catch(e){}
 let deliveryEvents=[];try{deliveryEvents=JSON.parse(localStorage.getItem(EVENT_KEY)||"[]")}catch(e){}
-// 伝票番号・売上番号は配達表専用データ（元のリストには持たせない）。キー："L:工程番号" / "E:イベントID"
+// 登録番号・伝票番号は配達表専用データ（元のリストには持たせない）。キー："L:工程番号" / "E:イベントID"
 const DELIVERY_META_KEY="factory_link_delivery_meta_v1";let deliveryMeta={};try{deliveryMeta=JSON.parse(localStorage.getItem(DELIVERY_META_KEY)||"{}")||{}}catch(e){deliveryMeta={}}
 function parseDim(v){const n=parseFloat(String(v??"").normalize("NFKC").replace(/,/g,""));return Number.isFinite(n)&&n>0?n:null}
 function fmtDim(n){return String(Number(n.toFixed(3)))}
@@ -1215,7 +1228,10 @@ function addDeliveryMemo(){let text=prompt("配達表に挿入するメモを入
 function deleteDeliveryMemo(key){if(!confirm("このメモを削除しますか？"))return;deliveryBoard=deliveryBoard.filter(x=>!(x.memo!==undefined&&x.key===key));persistDelivery();renderDeliveryBoard()}
 function updateDeliveryMemo(key,value){let x=deliveryBoard.find(x=>x.key===key);if(x){x.memo=value;persistDelivery()}}
 function editDeliveryField(key,field,value){let prefix=key.slice(0,2),id=key.slice(2);if(field==="slip"||field==="sales"){deliveryMeta[key]=deliveryMeta[key]||{};deliveryMeta[key][field]=value;persistDelivery();renderDeliveryBoard();return}if(prefix==="L:"){let l=lists.find(x=>x.serial===id);if(!l)return;if(field==="note"){l.deliveryNote=value;save()}return}else if(prefix==="E:"){let e=deliveryEvents.find(x=>x.id===id);if(!e)return;if(field==="destination")e.destination=value;if(field==="note")e.note=value;if(field==="date")e.date=value;if(field==="job")e.job=value;if(field==="customer")e.customer=value;}persistDelivery();renderDeliveryBoard()}
-function renderDeliveryBoard(){refreshEventSelect();let entries=deliveryEntries();const mvb=i=>`<span class="dl-moves"><button class="btn small secondary" onclick="moveDelivery(${i},-1)">↑</button><button class="btn small secondary" onclick="moveDelivery(${i},1)">↓</button></span>`;let dlNo=0;let html=entries.map((x,i)=>{if(x.memo!==undefined)return `<tr class="memo-row" draggable="true" ondragstart="deliveryDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${i})"><td class="dl-mv">${mvb(i)}</td><td colspan="13"><div class="memo-flex"><b>メモ</b><input value="${esc(x.memo)}" onchange="updateDeliveryMemo('${x.key}',this.value)"><button class="btn small secondary" style="color:#b91c1c" onclick="deleteDeliveryMemo('${x.key}')">削除</button></div></td></tr>`;let k=x.key;const isList=x.type==="list";const tt=v=>`title="${esc(v||"")}"`;const maxs=String(x.maxSize||"－").replace(/^最大サイズ\s*/,"");return `<tr class="drag-row" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${i})"><td class="dl-mv dl-no">${++dlNo}</td><td class="dl-date">${esc(x.dateLabel||x.date||"")}${isList?"":`<input type="date" class="dl-datepick" value="${esc(x.date||"")}" title="日付を変更" onclick="try{this.showPicker()}catch(e){}" onchange="editDeliveryField('${k}','date',this.value)">`}</td><td class="dl-serial">${isList?`<span class="badge">${esc(x.serial)}</span>`:`<span class="badge blue" title="配送イベント">${esc(x.event.id)}</span>${x.event.serial?` <span class="help">工程番号 ${esc(x.event.serial)}</span>`:""}`}</td><td class="dl-cust" ${isList?tt(x.customer):""}>${isList?esc(x.customer):`<input value="${esc(x.customer)}" onchange="editDeliveryField('${k}','customer',this.value)">`}</td><td class="dl-job" ${isList?tt(x.job):""}>${isList?esc(x.job):`<input value="${esc(x.job)}" onchange="editDeliveryField('${k}','job',this.value)">`}</td><td class="dl-dest" ${isList?tt(x.destination):""}>${isList?esc(x.destination):`<input value="${esc(x.destination)}" onchange="editDeliveryField('${k}','destination',this.value)">`}</td><td class="dl-cut">${isList?esc(x.cut):"－"}</td><td class="dl-qty">${isList?fmt(x.qty)+" 枚":"－"}</td><td class="dl-wt">${isList?fmt(x.weight)+" kg":"－"}</td><td class="dl-max">${esc(maxs)}</td><td class="dl-slip"><input value="${esc(x.slip)}" placeholder="伝票番号" onchange="editDeliveryField('${k}','slip',this.value)"></td><td class="dl-sales"><input value="${esc(x.sales)}" placeholder="売上番号" onchange="editDeliveryField('${k}','sales',this.value)"></td><td class="dl-note"><input value="${esc(x.note)}" placeholder="備考" onchange="editDeliveryField('${k}','note',this.value)"></td><td class="dl-mfg">${isList?`<span class="cut-inline">${esc(x.cut)}</span>`+(x.mfg||"－"):"－"}</td></tr>`}).join("");$("deliveryBoardTable").innerHTML=html?`<table class="dl-table"><thead><tr><th>No.</th><th>納期</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先</th><th>切断方法</th><th>枚数</th><th>角重量</th><th>最大サイズ</th><th>伝票番号</th><th>売上番号</th><th>備考</th><th>製造状況</th></tr></thead><tbody>${html}</tbody></table>`:'<div class="empty">配送データがありません</div>'}
+function cutShortLabel(cut){const s=String(cut||"").trim();if(!s||s==="未指定"||s==="－")return"－";const m={"ガス":"ガ","プラズマ":"プ","レーザー":"レ","シャーリング":"シ","外注":"外"};return m[s]||s.slice(0,1)}
+function deliveryGroupKey(x){if(!x||x.memo!==undefined||x.type!=="list")return"";const d=String(x.date||"").trim(),dest=String(x.destination||"").normalize("NFKC").replace(/\s+/g," ").trim();return(!d||!dest)?"":d+"\u0001"+dest}
+function deliveryGroupRuns(entries){const startMap=new Map(),skipSet=new Set(),rowMeta=new Map();let i=0;while(i<entries.length){const k=deliveryGroupKey(entries[i]);if(!k){i++;continue}let j=i+1,sumW=num(entries[i].weight);while(j<entries.length&&deliveryGroupKey(entries[j])===k){sumW+=num(entries[j].weight);j++}const len=j-i;if(len>=2){const grp={len,sumW:Math.round(sumW*10)/10,startIdx:i,endIdx:j-1};startMap.set(i,grp);for(let p=i;p<j;p++){rowMeta.set(p,{...grp,isTop:p===i,isBot:p===j-1});if(p>i)skipSet.add(p)}}i=j}return{startMap,skipSet,rowMeta}}
+function renderDeliveryBoard(){refreshEventSelect();let entries=deliveryEntries();const {startMap,skipSet,rowMeta}=deliveryGroupRuns(entries);const mvb=i=>`<span class="dl-moves"><button class="btn small secondary" onclick="moveDelivery(${i},-1)">↑</button><button class="btn small secondary" onclick="moveDelivery(${i},1)">↓</button></span>`;let dlNo=0;let html=entries.map((x,i)=>{if(x.memo!==undefined)return `<tr class="memo-row" draggable="true" ondragstart="deliveryDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${i})"><td class="dl-mv">${mvb(i)}</td><td colspan="14"><div class="memo-flex"><b>メモ</b><input value="${esc(x.memo)}" onchange="updateDeliveryMemo('${x.key}',this.value)"><button class="btn small secondary" style="color:#b91c1c" onclick="deleteDeliveryMemo('${x.key}')">削除</button></div></td></tr>`;let k=x.key;const isList=x.type==="list";const tt=v=>`title="${esc(v||"")}"`;const maxs=String(x.maxSize||"－").replace(/^最大サイズ\s*/,"");const cutInit=isList?cutShortLabel(x.cut):"－";const grp=startMap.get(i),rm=rowMeta.get(i);const tbCls=rm?`${rm.isTop?" grp-top":""}${rm.isBot?" grp-bot":""}`:"";const destCls=rm?` grp-left${tbCls}`:"";const gwtCell=skipSet.has(i)?"":(grp?`<td class="dl-gwt grp-gwt" rowspan="${grp.len}">${fmt(grp.sumW)} kg</td>`:`<td class="dl-gwt"></td>`);return `<tr class="drag-row" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${i})"><td class="dl-mv dl-no">${++dlNo}</td><td class="dl-date">${esc(x.dateLabel||x.date||"")}${isList?"":`<input type="date" class="dl-datepick" value="${esc(x.date||"")}" title="日付を変更" onclick="try{this.showPicker()}catch(e){}" onchange="editDeliveryField('${k}','date',this.value)">`}</td><td class="dl-serial">${isList?`<span class="badge">${esc(x.serial)}</span>`:`<span class="badge blue" title="配送イベント">${esc(x.event.id)}</span>${x.event.serial?` <span class="help">工程番号 ${esc(x.event.serial)}</span>`:""}`}</td><td class="dl-cust" ${isList?tt(x.customer):""}>${isList?esc(x.customer):`<input value="${esc(x.customer)}" onchange="editDeliveryField('${k}','customer',this.value)">`}</td><td class="dl-job" ${isList?tt(x.job):""}>${isList?esc(x.job):`<input value="${esc(x.job)}" onchange="editDeliveryField('${k}','job',this.value)">`}</td><td class="dl-dest${destCls}" ${isList?tt(x.destination):""}>${isList?esc(x.destination):`<input value="${esc(x.destination)}" onchange="editDeliveryField('${k}','destination',this.value)">`}</td><td class="dl-qty${tbCls}">${isList?fmt(x.qty)+" 枚":"－"}</td><td class="dl-wt${tbCls}">${isList?fmt(x.weight)+" kg":"－"}</td>${gwtCell}<td class="dl-max">${esc(maxs)}</td><td class="dl-slip"><input value="${esc(x.slip)}" placeholder="登録番号" onchange="editDeliveryField('${k}','slip',this.value)"></td><td class="dl-sales"><input value="${esc(x.sales)}" placeholder="伝票番号" onchange="editDeliveryField('${k}','sales',this.value)"></td><td class="dl-note"><input value="${esc(x.note)}" placeholder="備考" onchange="editDeliveryField('${k}','note',this.value)"></td><td class="dl-cut" ${isList?tt(x.cut):""}>${esc(cutInit)}</td><td class="dl-mfg">${isList?`<span class="cut-inline">${esc(cutInit)}</span>`+(x.mfg||"－"):"－"}</td></tr>`}).join("");$("deliveryBoardTable").innerHTML=html?`<table class="dl-table"><thead><tr><th>No.</th><th>納期</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先</th><th>枚数</th><th>角重量</th><th>合計重量</th><th>最大サイズ</th><th>登録番号</th><th>伝票番号</th><th>備考</th><th>切断</th><th>製造状況</th></tr></thead><tbody>${html}</tbody></table>`:'<div class="empty">配送データがありません</div>'}
 let draggedDeliveryIndex=null;function deliveryDragStart(e,index){draggedDeliveryIndex=index;e.dataTransfer.effectAllowed="move"}function deliveryDrop(e,index){e.preventDefault();if(draggedDeliveryIndex===null||draggedDeliveryIndex===index)return;const [item]=deliveryBoard.splice(draggedDeliveryIndex,1);deliveryBoard.splice(index,0,item);draggedDeliveryIndex=null;persistDelivery();renderDeliveryBoard()}
 window.moveDelivery=moveDelivery;window.updateDeliveryMemo=updateDeliveryMemo;window.editDeliveryField=editDeliveryField;window.deliveryDragStart=deliveryDragStart;window.deliveryDrop=deliveryDrop;
 $("addEventBtn").onclick=addDeliveryEvent;$("addDeliveryMemoBtn").onclick=addDeliveryMemo;
@@ -1243,46 +1259,64 @@ function deliveryDocTitle(){
 function printDelivery(){
  const entries=deliveryPrintEntries();
  const {title}=deliveryDocTitle();
+ const {startMap,skipSet,rowMeta}=deliveryGroupRuns(entries);
  let sumQty=0,sumW=0,listRowCount=0;
- const bodyRows=entries.map(x=>{
-  if(x.memo!==undefined)return `<tr class="memo-print"><td colspan="13" style="background:#fef9c3!important;font-weight:700">${esc(x.memo)}</td></tr>`;
+ const bodyRows=entries.map((x,i)=>{
+  if(x.memo!==undefined)return `<tr class="memo-print"><td colspan="14" style="background:#fef9c3!important;font-weight:700">${esc(x.memo)}</td></tr>`;
   const isList=x.type==="list";
   const maxs=isList?String(x.maxSize||"－").replace(/^最大サイズ\s*/,""):"";
   if(isList){sumQty+=num(x.qty);sumW+=Math.round(num(x.weight)*10)/10;listRowCount++;}
-  return `<tr><td>${esc(x.dateLabel||x.date||"")}</td><td>${esc(isList?x.serial:(x.serial||""))}</td><td>${esc(x.customer||"")}</td><td>${esc(x.job||"")}</td><td>${esc(x.destination||"")}</td><td>${esc(isList?(x.cut||""):"")}</td><td>${isList?fmt(x.qty)+" 枚":""}</td><td>${isList?fmt(Math.round(num(x.weight)*10)/10)+" kg":""}</td><td>${esc(maxs)}</td><td>${esc(x.slip||"")}</td><td>${esc(x.sales||"")}</td><td>${esc(x.note||"")}</td><td class="proc-col">${isList?(x.procPrint||"－"):"－"}</td></tr>`;
+  const grp=startMap.get(i),rm=rowMeta.get(i);
+  const tbCls=rm?`${rm.isTop?" grp-top":""}${rm.isBot?" grp-bot":""}`:"";
+  const destCls=rm?` class="grp-left${tbCls}"`:"";
+  const gwtCell=skipSet.has(i)?"":(grp?`<td class="gwt grp-gwt" rowspan="${grp.len}">${fmt(grp.sumW)} kg</td>`:`<td class="gwt" style="background:transparent!important"></td>`);
+  const cutInit=isList?cutShortLabel(x.cut):"－";
+  return `<tr><td class="nw">${esc(x.dateLabel||x.date||"")}</td><td class="nw">${esc(isList?x.serial:(x.serial||""))}</td><td>${esc(x.customer||"")}</td><td>${esc(x.job||"")}</td><td${destCls}>${esc(x.destination||"")}</td><td class="num${tbCls}">${isList?fmt(x.qty)+" 枚":""}</td><td class="num${tbCls}">${isList?fmt(Math.round(num(x.weight)*10)/10)+" kg":""}</td>${gwtCell}<td class="nw">${esc(maxs)}</td><td>${esc(x.slip||"")}</td><td>${esc(x.sales||"")}</td><td>${esc(x.note||"")}</td><td class="cut-col nw">${esc(cutInit)}</td><td class="proc-col">${isList?(x.procPrint||"－"):"－"}</td></tr>`;
  }).join("");
- const totRow=listRowCount>0?`<tr style="background:#eff6ff!important;font-weight:700"><td colspan="6">合計</td><td>${fmt(sumQty)} 枚</td><td>${fmt(Math.round(sumW*10)/10)} kg</td><td colspan="5"></td></tr>`:"";
+ const totRow=listRowCount>0?`<tr style="background:#eff6ff!important;font-weight:700"><td colspan="5">合計</td><td class="num">${fmt(sumQty)} 枚</td><td class="num">${fmt(Math.round(sumW*10)/10)} kg</td><td colspan="7"></td></tr>`:"";
  let area=document.getElementById("deliveryPrintArea");
  if(!area){area=document.createElement("div");area.id="deliveryPrintArea";document.body.appendChild(area);}
- area.innerHTML=`<h1>${esc(title)}</h1><div class="print-meta">出力日：${esc(todayStr().replace(/-/g,"/"))}　／　件数：${entries.length}件</div><table><thead><tr><th>納期</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先</th><th>切断方法</th><th>枚数</th><th>角重量</th><th>最大サイズ</th><th>伝票番号</th><th>売上番号</th><th>備考</th><th>工程</th></tr></thead><tbody>${(bodyRows+totRow)||'<tr><td colspan="13">対象データはありません</td></tr>'}</tbody></table>`;
+ area.innerHTML=`<h1>${esc(title)}</h1><div class="print-meta">出力日：${esc(todayStr().replace(/-/g,"/"))}　／　件数：${entries.length}件</div><table><thead><tr><th>納期</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先</th><th>枚数</th><th>角重量</th><th>合計重量</th><th>最大サイズ</th><th>登録番号</th><th>伝票番号</th><th>備考</th><th>切断</th><th>工程</th></tr></thead><tbody>${(bodyRows+totRow)||'<tr><td colspan="14">対象データはありません</td></tr>'}</tbody></table>`;
  setPrintPage("A4 landscape");document.body.dataset.printMode="delivery";document.title=title;window.print();
+}
+function xlsxRefsExpr(colLet,rowNums){
+ if(!rowNums||!rowNums.length)return"0";
+ const parts=[];let s=rowNums[0],e=rowNums[0];
+ for(let i=1;i<rowNums.length;i++){
+  if(rowNums[i]===e+1)e=rowNums[i];
+  else{parts.push(s===e?`${colLet}${s}`:`${colLet}${s}:${colLet}${e}`);s=e=rowNums[i];}
+ }
+ parts.push(s===e?`${colLet}${s}`:`${colLet}${s}:${colLet}${e}`);
+ return parts.join(",");
 }
 function exportDeliveryExcel(){
  const entries=deliveryPrintEntries();
  const today=todayStr();
  const {dateRaw,site,title}=deliveryDocTitle();
- const headers=["納期","工程番号","需要家","工事名","納入先","切断方法","枚数","角重量","最大サイズ","伝票番号","売上番号","備考","工程"];
- const colWidths=[8.5,8.5,13,24,16.5,8.5,8,10.5,11.5,9.5,9.5,22,12];
+ const {startMap}=deliveryGroupRuns(entries);
+ const headers=["納期","工程番号","需要家","工事名","納入先","枚数","角重量","合計重量","最大サイズ","登録番号","伝票番号","備考","切断","工程"];
+ const colWidths=[8.0,8.2,12.5,23.0,16.0,7.8,10.0,10.6,11.0,9.0,9.0,21.5,4.6,11.5];
  const rows=[
   {r:1,ht:20,cells:[{c:1,t:"s",v:title,st:14}]},
   {r:2,ht:13,cells:[{c:1,t:"s",v:`出力日：${today.replace(/-/g,"/")}　／　件数：${entries.length}件`,st:15}]},
-  {r:3,ht:16,cells:headers.map((h,i)=>({c:i+1,t:"s",v:h,st:(i===6||i===7)?17:16}))}
+  {r:3,ht:16,cells:headers.map((h,i)=>({c:i+1,t:"s",v:h,st:(i===5||i===6||i===7)?17:16}))}
  ];
- const merges=["A1:M1","A2:M2"];
- let curRow=4,sumQty=0,sumW=0,listRowCount=0;
+ const merges=["A1:N1","A2:N2"];
+ let curRow=4,sumQty=0,sumW=0;
+ const dataRows=[],entryRowMap=[];
  if(!entries.length){
   rows.push({r:curRow,ht:15,cells:headers.map((_,i)=>i===0?{c:1,t:"s",v:"対象データはありません",st:19}:{c:i+1,t:"b",st:19})});
-  merges.push(`A${curRow}:M${curRow}`);
+  merges.push(`A${curRow}:N${curRow}`);
   curRow++;
  }else{
-  const dataStart=curRow;
-  entries.forEach(x=>{
+  entries.forEach((x,idx)=>{
    if(x.memo!==undefined){
     const text=String(x.memo||"");
     const mLines=Math.max(1,Math.ceil(xlsxTextWidth(text)/145));
     const ht=Math.max(14,Math.round((mLines*10.2+3)*10)/10);
     rows.push({r:curRow,ht,cells:headers.map((_,i)=>i===0?{c:1,t:"s",v:text,st:22}:{c:i+1,t:"b",st:22})});
-    merges.push(`A${curRow}:M${curRow}`);
+    merges.push(`A${curRow}:N${curRow}`);
+    entryRowMap[idx]=curRow;
     curRow++;
     return;
    }
@@ -1290,30 +1324,30 @@ function exportDeliveryExcel(){
    const maxs=isList?String(x.maxSize||"－").replace(/^最大サイズ\s*/,""):"";
    const qtyVal=isList?num(x.qty):null;
    const wVal=isList?Math.round(num(x.weight)*10)/10:null;
-   if(isList){sumQty+=qtyVal;sumW+=wVal;listRowCount++;}
+   if(isList){sumQty+=qtyVal;sumW+=wVal;dataRows.push(curRow);}
    const dateTxt=x.dateLabel||x.date||"";
    const serialTxt=isList?x.serial:(x.serial||"");
    const custTxt=x.customer||"";
    const jobTxt=x.job||"";
    const destTxt=x.destination||"";
-   const cutTxt=isList?(x.cut||""):"";
    const slipTxt=x.slip||"";
    const salesTxt=x.sales||"";
    const noteTxt=x.note||"";
+   const cutTxt=isList?cutShortLabel(x.cut):"－";
    const procTxt=isList?(x.procText||"－"):"－";
-   colWidths[0]=Math.max(colWidths[0],Math.min(13,Math.ceil(xlsxTextWidth(dateTxt)*0.85+1)));
-   colWidths[1]=Math.max(colWidths[1],Math.min(11,Math.ceil(xlsxTextWidth(serialTxt)*0.85+1)));
-   colWidths[6]=Math.max(colWidths[6],Math.min(12,Math.ceil(xlsxTextWidth(isList?fmt(qtyVal)+" 枚":"")*0.85+1)));
-   colWidths[7]=Math.max(colWidths[7],Math.min(14,Math.ceil(xlsxTextWidth(isList?fmt(wVal)+" kg":"")*0.85+1)));
-   colWidths[8]=Math.max(colWidths[8],Math.min(14,Math.ceil(xlsxTextWidth(maxs)*0.85+1)));
-   colWidths[9]=Math.max(colWidths[9],Math.min(13,Math.ceil(xlsxTextWidth(slipTxt)*0.85+1)));
-   colWidths[10]=Math.max(colWidths[10],Math.min(13,Math.ceil(xlsxTextWidth(salesTxt)*0.85+1)));
+   colWidths[0]=Math.max(colWidths[0],Math.min(12.5,Math.ceil(xlsxTextWidth(dateTxt)*0.85+1)));
+   colWidths[1]=Math.max(colWidths[1],Math.min(10.5,Math.ceil(xlsxTextWidth(serialTxt)*0.85+1)));
+   colWidths[5]=Math.max(colWidths[5],Math.min(11.5,Math.ceil(xlsxTextWidth(isList?fmt(qtyVal)+" 枚":"")*0.85+1)));
+   colWidths[6]=Math.max(colWidths[6],Math.min(13.5,Math.ceil(xlsxTextWidth(isList?fmt(wVal)+" kg":"")*0.85+1)));
+   colWidths[8]=Math.max(colWidths[8],Math.min(13.5,Math.ceil(xlsxTextWidth(maxs)*0.85+1)));
+   colWidths[9]=Math.max(colWidths[9],Math.min(12.5,Math.ceil(xlsxTextWidth(slipTxt)*0.85+1)));
+   colWidths[10]=Math.max(colWidths[10],Math.min(12.5,Math.ceil(xlsxTextWidth(salesTxt)*0.85+1)));
    const lines=Math.max(1,
     Math.ceil(xlsxTextWidth(custTxt)/(colWidths[2]*1.05)),
     Math.ceil(xlsxTextWidth(jobTxt)/(colWidths[3]*1.05)),
     Math.ceil(xlsxTextWidth(destTxt)/(colWidths[4]*1.05)),
     Math.ceil(xlsxTextWidth(noteTxt)/(colWidths[11]*1.05)),
-    Math.ceil(xlsxTextWidth(procTxt)/(colWidths[12]*1.05))
+    Math.ceil(xlsxTextWidth(procTxt)/(colWidths[13]*1.05))
    );
    const ht=Math.max(13.5,Math.round((lines*10.2+3)*10)/10);
    const cells=[
@@ -1322,28 +1356,53 @@ function exportDeliveryExcel(){
     {c:3,t:"s",v:custTxt,st:18},
     {c:4,t:"s",v:jobTxt,st:18},
     {c:5,t:"s",v:destTxt,st:18},
-    {c:6,t:"s",v:cutTxt,st:19},
-    isList?{c:7,t:"n",v:qtyVal,st:20}:{c:7,t:"b",st:19},
-    isList?{c:8,t:"n",v:wVal,st:21}:{c:8,t:"b",st:19},
+    isList?{c:6,t:"n",v:qtyVal,st:20}:{c:6,t:"b",st:19},
+    isList?{c:7,t:"n",v:wVal,st:21}:{c:7,t:"b",st:19},
+    {c:8,t:"b",st:19},
     {c:9,t:"s",v:maxs,st:19},
     {c:10,t:"s",v:slipTxt,st:19},
     {c:11,t:"s",v:salesTxt,st:19},
     {c:12,t:"s",v:noteTxt,st:18},
-    {c:13,t:"s",v:procTxt,st:19}
+    {c:13,t:"s",v:cutTxt,st:19},
+    {c:14,t:"s",v:procTxt,st:19}
    ];
    rows.push({r:curRow,ht,cells});
+   entryRowMap[idx]=curRow;
    curRow++;
   });
-  if(listRowCount>0){
-   const dataEnd=curRow-1;
+  startMap.forEach(grp=>{
+   const startR=entryRowMap[grp.startIdx],endR=entryRowMap[grp.endIdx];
+   if(!startR||!endR)return;
+   colWidths[7]=Math.max(colWidths[7],Math.min(13.5,Math.ceil(xlsxTextWidth(fmt(grp.sumW)+" kg")*0.85+1.2)));
+   for(let rNum=startR;rNum<=endR;rNum++){
+    const rowObj=rows.find(r=>r.r===rNum);
+    if(!rowObj)continue;
+    const isTop=rNum===startR,isBot=rNum===endR;
+    const cDest=rowObj.cells.find(c=>c.c===5);
+    if(cDest)cDest.st=isTop?28:(isBot?30:29);
+    const cQty=rowObj.cells.find(c=>c.c===6);
+    if(cQty&&(isTop||isBot))cQty.st=isTop?31:32;
+    const cWt=rowObj.cells.find(c=>c.c===7);
+    if(cWt&&(isTop||isBot))cWt.st=isTop?33:34;
+    const ci=rowObj.cells.findIndex(c=>c.c===8);
+    const hSt=isTop?35:(isBot?37:36);
+    if(ci!==-1){
+     rowObj.cells[ci]=isTop
+      ?{c:8,t:"f",f:`SUM(G${startR}:G${endR})`,v:grp.sumW,st:hSt}
+      :{c:8,t:"b",st:hSt};
+    }
+   }
+   merges.push(`H${startR}:H${endR}`);
+  });
+  if(dataRows.length>0){
    sumW=Math.round(sumW*10)/10;
    rows.push({r:curRow,ht:16,cells:headers.map((_,i)=>{
     if(i===0)return{c:1,t:"s",v:"合計",st:23};
-    if(i===6)return{c:7,t:"f",f:`SUM(G${dataStart}:G${dataEnd})`,v:sumQty,st:24};
-    if(i===7)return{c:8,t:"f",f:`SUM(H${dataStart}:H${dataEnd})`,v:sumW,st:25};
+    if(i===5)return{c:6,t:"f",f:`SUM(${xlsxRefsExpr("F",dataRows)})`,v:sumQty,st:24};
+    if(i===6)return{c:7,t:"f",f:`SUM(${xlsxRefsExpr("G",dataRows)})`,v:sumW,st:25};
     return{c:i+1,t:"b",st:23};
    })});
-   merges.push(`A${curRow}:F${curRow}`);
+   merges.push(`A${curRow}:E${curRow}`);
   }
  }
  const bytes=xlsxBuildTableWorkbook([{sheetName:"配達表",colWidths,rows,merges,landscape:true,compactMargins:true}]);
@@ -2007,7 +2066,7 @@ function xlsxStylesXml(){
 <font><sz val="8"/><color rgb="FF000000"/><name val="Yu Gothic UI"/></font>
 <font><b/><sz val="8"/><color rgb="FF000000"/><name val="Yu Gothic UI"/></font>
 </fonts>
-<fills count="8">
+<fills count="9">
 <fill><patternFill patternType="none"/></fill>
 <fill><patternFill patternType="gray125"/></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FF1E3A8A"/></patternFill></fill>
@@ -2016,14 +2075,23 @@ function xlsxStylesXml(){
 <fill><patternFill patternType="solid"><fgColor rgb="FFE2E8F0"/></patternFill></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFE8E8E8"/></patternFill></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFFEF9C3"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFF1F5F9"/></patternFill></fill>
 </fills>
-<borders count="3">
+<borders count="11">
 <border><left/><right/><top/><bottom/><diagonal/></border>
 <border><left style="thin"><color rgb="FFCBD5E1"/></left><right style="thin"><color rgb="FFCBD5E1"/></right><top style="thin"><color rgb="FFCBD5E1"/></top><bottom style="thin"><color rgb="FFCBD5E1"/></bottom><diagonal/></border>
 <border><left style="thin"><color rgb="FF64748B"/></left><right style="thin"><color rgb="FF64748B"/></right><top style="thin"><color rgb="FF64748B"/></top><bottom style="thin"><color rgb="FF64748B"/></bottom><diagonal/></border>
+<border><left style="medium"><color rgb="FF000000"/></left><right style="thin"><color rgb="FF64748B"/></right><top style="medium"><color rgb="FF000000"/></top><bottom style="thin"><color rgb="FF64748B"/></bottom><diagonal/></border>
+<border><left style="medium"><color rgb="FF000000"/></left><right style="thin"><color rgb="FF64748B"/></right><top style="thin"><color rgb="FF64748B"/></top><bottom style="thin"><color rgb="FF64748B"/></bottom><diagonal/></border>
+<border><left style="medium"><color rgb="FF000000"/></left><right style="thin"><color rgb="FF64748B"/></right><top style="thin"><color rgb="FF64748B"/></top><bottom style="medium"><color rgb="FF000000"/></bottom><diagonal/></border>
+<border><left style="thin"><color rgb="FF64748B"/></left><right style="thin"><color rgb="FF64748B"/></right><top style="medium"><color rgb="FF000000"/></top><bottom style="thin"><color rgb="FF64748B"/></bottom><diagonal/></border>
+<border><left style="thin"><color rgb="FF64748B"/></left><right style="thin"><color rgb="FF64748B"/></right><top style="thin"><color rgb="FF64748B"/></top><bottom style="medium"><color rgb="FF000000"/></bottom><diagonal/></border>
+<border><left style="thin"><color rgb="FF64748B"/></left><right style="medium"><color rgb="FF000000"/></right><top style="medium"><color rgb="FF000000"/></top><bottom style="thin"><color rgb="FF64748B"/></bottom><diagonal/></border>
+<border><left style="thin"><color rgb="FF64748B"/></left><right style="medium"><color rgb="FF000000"/></right><top style="thin"><color rgb="FF64748B"/></top><bottom style="thin"><color rgb="FF64748B"/></bottom><diagonal/></border>
+<border><left style="thin"><color rgb="FF64748B"/></left><right style="medium"><color rgb="FF000000"/></right><top style="thin"><color rgb="FF64748B"/></top><bottom style="medium"><color rgb="FF000000"/></bottom><diagonal/></border>
 </borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="26">
+<cellXfs count="38">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>
 <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
@@ -2050,6 +2118,18 @@ function xlsxStylesXml(){
 <xf numFmtId="0" fontId="9" fillId="3" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
 <xf numFmtId="165" fontId="9" fillId="3" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
 <xf numFmtId="166" fontId="9" fillId="3" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="0" fontId="9" fillId="8" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="166" fontId="9" fillId="3" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="0" fontId="8" fillId="0" borderId="3" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="8" fillId="0" borderId="4" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="8" fillId="0" borderId="5" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>
+<xf numFmtId="165" fontId="8" fillId="0" borderId="6" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf>
+<xf numFmtId="165" fontId="8" fillId="0" borderId="7" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf>
+<xf numFmtId="166" fontId="8" fillId="0" borderId="6" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf>
+<xf numFmtId="166" fontId="8" fillId="0" borderId="7" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf>
+<xf numFmtId="166" fontId="9" fillId="3" borderId="8" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="166" fontId="9" fillId="3" borderId="9" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="166" fontId="9" fillId="3" borderId="10" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 <dxfs count="0"/>
