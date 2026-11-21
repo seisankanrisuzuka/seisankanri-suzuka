@@ -373,6 +373,7 @@ body.on-stage .arch-toggle span{display:none}
 .rep-chart-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
 .rep-mode-btns,.rep-preset-btns{display:inline-flex;gap:4px;flex-wrap:wrap}
 .rep-mode-btns .btn.active{background:var(--navy);color:#fff}
+.rep-csv-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin:6px 0 8px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px}
 .rep-chart-legend{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:12px;color:#334155;margin:6px 0 10px}
 .rep-lg-bar{display:inline-block;width:12px;height:12px;background:#3b82f6;border-radius:2px;vertical-align:middle;margin-right:4px}
 .rep-lg-line{display:inline-block;width:16px;height:3px;background:#ea580c;vertical-align:middle;margin-right:4px;position:relative}
@@ -428,8 +429,8 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261120i"></script>
-  <script src="sync.js?v=20261120i"></script>
+  <script src="firebase-config.js?v=20261120k"></script>
+  <script src="sync.js?v=20261120k"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -538,12 +539,12 @@ body.on-stage .arch-toggle span{display:none}
 <div id="reportSyncStatus" class="help no-print" style="margin-top:6px"></div>
 <div id="reportBody" style="margin-top:10px"></div></div>
 <div class="panel no-print" id="reportChartPanel">
-<h2>工程別 枚数・重量 複合グラフ（期間集計）</h2>
-<p class="help">指定した期間に完了した工程について、工程別（切断は切断方法別）に重量（棒）と枚数（折れ線）を1日ごと・月ごとで表示します。切断方法が「外注」のもののみ、完了日ではなく「納期」で集計します。</p>
+<h2>工程別 枚数・重量 複合グラフ＆CSV出力（期間集計）</h2>
+<p class="help">指定した期間に完了した工程について、工程別（切断は切断方法別）に重量（棒）と枚数（折れ線）の表示とCSV出力を行います。切断方法が「外注」のもののみ、完了日ではなく「納期」で集計します。</p>
 <div class="row">
  <div class="field"><label>期間（開始日）</label><input id="reportChartStart" type="date"></div>
  <div class="field"><label>期間（終了日）</label><input id="reportChartEnd" type="date"></div>
- <div class="field"><label>工程</label><select id="reportChartProc"><option value="">すべて</option><option value="切断">切断（方法別）</option><option value="キリ">キリ穴</option><option value="ショット">ショット</option><option value="開先">開先</option><option value="曲げ">曲げ</option></select></div>
+ <div class="field"><label>項目（工程・切断方法）</label><select id="reportChartProc"><option value="">すべて（全項目）</option><option value="切断">切断（方法別すべて）</option><option value="切断|ガス">切断 - ガス</option><option value="切断|プラズマ">切断 - プラズマ</option><option value="切断|レーザー">切断 - レーザー</option><option value="切断|シャーリング">切断 - シャーリング</option><option value="切断|外注">切断 - 外注（納期基準）</option><option value="切断|未指定">切断 - 未指定</option><option value="キリ">キリ穴</option><option value="ショット">ショット</option><option value="開先">開先</option><option value="曲げ">曲げ</option></select></div>
 </div>
 <div class="rep-chart-bar">
  <div class="rep-mode-btns" role="group" aria-label="集計単位">
@@ -556,6 +557,11 @@ body.on-stage .arch-toggle span{display:none}
   <button class="btn small secondary" type="button" onclick="setReportChartPreset('days30')">直近30日</button>
   <button class="btn small secondary" type="button" onclick="setReportChartPreset('year')">今年</button>
  </div>
+</div>
+<div class="rep-csv-bar">
+ <div class="field" style="min-width:220px;max-width:300px;margin:0;flex:1 1 220px"><label>CSV出力形式</label><select id="reportCsvType"><option value="detail">材質・板厚別明細（日報表と同じ形式）</option><option value="summary">項目別 合計（日別／月別）</option></select></div>
+ <button class="btn teal small" type="button" id="reportCsvBtn">日報CSV出力</button>
+ <span id="reportCsvMsg" class="help" style="margin:0;flex:1 1 200px"></span>
 </div>
 <div class="rep-chart-legend">
  <span><span class="rep-lg-bar"></span>角重量（左軸：kg）</span>
@@ -1579,29 +1585,34 @@ function renderComboSvg(pts,cardW,mode){
  svg+=xLblHtml+hitsHtml+`</svg>`;
  return svg;
 }
-function renderReportCharts(){
- syncReportRange(false);
- updateReportSyncStatus();
- const grid=$("reportChartGrid");if(!grid)return;
- const start=$("reportChartStart")?.value||"",end=$("reportChartEnd")?.value||"",procFilter=$("reportChartProc")?.value||"";
- if(!start||!end){grid.innerHTML='<div class="empty">開始日と終了日を指定してください</div>';return}
- if(start>end){grid.innerHTML='<div class="empty">開始日は終了日以前の日付を指定してください</div>';return}
- const buckets=buildReportBuckets(start,end,reportChartMode);
- if(buckets===null){grid.innerHTML='<div class="empty">「1日ごと」表示は最大370日までです。「月ごと」に切り替えるか期間を短くしてください。</div>';return}
- if(!buckets.length){grid.innerHTML='<div class="empty">期間内の集計対象がありません</div>';return}
+function matchReportFilter(filter,proc,sub){
+ if(!filter)return true;
+ if(filter.includes("|")){
+  const [fp,fs]=filter.split("|");
+  return proc===fp&&(sub||"未指定")===fs;
+ }
+ return proc===filter;
+}
+function collectReportSeries(start,end,procFilter,mode){
  const seriesMap={};
+ const ensureSeries=(proc,sub)=>{
+  const sKey=proc==="切断"?`切断|${sub}`:proc;
+  if(!seriesMap[sKey]){
+   const isOut=proc==="切断"&&sub==="外注";
+   const itemName=proc==="切断"?`切断-${sub}`:(proc==="キリ"?"キリ穴":proc);
+   const title=isOut?"切断 - 外注（納期基準）":(proc==="切断"?`切断 - ${sub}`:itemName);
+   seriesMap[sKey]={key:sKey,proc,sub,itemName,title,basis:isOut?"納期":"完了日",buckets:{}};
+  }
+  return seriesMap[sKey];
+ };
+ const ensureBucket=(s,bKey)=>s.buckets[bKey]=s.buckets[bKey]||{cnt:0,mats:{}};
  reportAllLists().forEach(l=>{
   const isOutCut=cutLabel(l)==="外注";
-  if((!procFilter||procFilter==="切断")&&isOutCut){
+  if(isOutCut&&matchReportFilter(procFilter,"切断","外注")){
    const dt=dueStart(l);
    if(dt&&dt>=start&&dt<=end){
-    const bKey=reportChartMode==="month"?dt.slice(0,7):dt;
-    const sKey="切断|外注";
-    if(!seriesMap[sKey])seriesMap[sKey]={key:sKey,proc:"切断",sub:"外注",title:"切断 - 外注（納期基準）",buckets:{}};
-    const cell=seriesMap[sKey].buckets[bKey]=seriesMap[sKey].buckets[bKey]||{qty:0,w:0,cnt:0};
-    cell.qty+=total(l,"qty");
-    cell.w+=total(l,"weight");
-    cell.cnt+=1;
+    const bKey=mode==="month"?dt.slice(0,7):dt;
+    addMatsToBucket(ensureBucket(ensureSeries("切断","外注"),bKey),l);
    }
   }
   const seen=new Set();
@@ -1609,18 +1620,12 @@ function renderReportCharts(){
    if(seen.has(p))return;seen.add(p);
    if(p==="バンドソー"||l.processStatus?.[p]!=="done")return;
    if(p==="切断"&&isOutCut)return;
-   if(procFilter&&procFilter!==p)return;
+   const sub=p==="切断"?cutLabel(l):"";
+   if(!matchReportFilter(procFilter,p,sub))return;
    const dt=doneDateOf(l,p);
    if(!dt||dt<start||dt>end)return;
-   const bKey=reportChartMode==="month"?dt.slice(0,7):dt;
-   const sub=p==="切断"?cutLabel(l):"";
-   const sKey=p==="切断"?`切断|${sub}`:p;
-   const title=p==="切断"?`切断 - ${sub}`:(p==="キリ"?"キリ穴":p);
-   if(!seriesMap[sKey])seriesMap[sKey]={key:sKey,proc:p,sub,title,buckets:{}};
-   const cell=seriesMap[sKey].buckets[bKey]=seriesMap[sKey].buckets[bKey]||{qty:0,w:0,cnt:0};
-   cell.qty+=total(l,"qty");
-   cell.w+=total(l,"weight");
-   cell.cnt+=1;
+   const bKey=mode==="month"?dt.slice(0,7):dt;
+   addMatsToBucket(ensureBucket(ensureSeries(p,sub),bKey),l);
   });
  });
  const smStart=start.slice(0,7),smEnd=end.slice(0,7);
@@ -1628,24 +1633,15 @@ function renderReportCharts(){
   if(!doc||!doc.month||doc.month<smStart||doc.month>smEnd)return;
   Object.values(doc.entries||{}).forEach(e=>{
    if(!e||!e.date||e.date<start||e.date>end)return;
-   const bKey=reportChartMode==="month"?e.date.slice(0,7):e.date;
-   let sKey="",title="",proc=e.proc||"",sub=e.sub||"";
+   let proc=e.proc||"",sub=e.sub||"";
    if(e.kind==="outcut"){
-    if(procFilter&&procFilter!=="切断")return;
-    proc="切断";sub="外注";sKey="切断|外注";title="切断 - 外注（納期基準）";
+    proc="切断";sub="外注";
    } else if(e.kind==="done"){
     if(proc==="切断"&&sub==="外注")return;
-    if(procFilter&&procFilter!==proc)return;
-    sKey=proc==="切断"?`切断|${sub}`:proc;
-    title=proc==="切断"?`切断 - ${sub}`:(proc==="キリ"?"キリ穴":proc);
    } else return;
-   if(!seriesMap[sKey])seriesMap[sKey]={key:sKey,proc,sub,title,buckets:{}};
-   const cell=seriesMap[sKey].buckets[bKey]=seriesMap[sKey].buckets[bKey]||{qty:0,w:0,cnt:0};
-   let eq=0,ew=0;
-   Object.values(e.mats||{}).forEach(m=>{eq+=num(m.qty);ew+=num(m.w)});
-   cell.qty+=eq;
-   cell.w+=ew;
-   cell.cnt+=num(e.cnt);
+   if(!matchReportFilter(procFilter,proc,sub))return;
+   const bKey=mode==="month"?e.date.slice(0,7):e.date;
+   mergeSummaryEntryToBucket(ensureBucket(ensureSeries(proc,sub),bKey),e);
   });
  });
  const keys=Object.keys(seriesMap).sort((a,b)=>{
@@ -1659,16 +1655,92 @@ function renderReportCharts(){
   }
   return 0;
  });
- if(!keys.length){grid.innerHTML='<div class="empty">指定した期間に完了した工程はありません</div>';return}
+ return {seriesMap,keys};
+}
+function bucketTotals(b){
+ if(!b)return {qty:0,w:0,cnt:0};
+ const ms=Object.values(b.mats||{});
+ return {qty:ms.reduce((a,r)=>a+num(r.qty),0),w:ms.reduce((a,r)=>a+num(r.w),0),cnt:num(b.cnt)};
+}
+function renderReportCharts(){
+ syncReportRange(false);
+ updateReportSyncStatus();
+ const grid=$("reportChartGrid");if(!grid)return;
+ const start=$("reportChartStart")?.value||"",end=$("reportChartEnd")?.value||"",procFilter=$("reportChartProc")?.value||"";
+ if(!start||!end){grid.innerHTML='<div class="empty">開始日と終了日を指定してください</div>';return}
+ if(start>end){grid.innerHTML='<div class="empty">開始日は終了日以前の日付を指定してください</div>';return}
+ const buckets=buildReportBuckets(start,end,reportChartMode);
+ if(buckets===null){grid.innerHTML='<div class="empty">「1日ごと」表示は最大370日までです。「月ごと」に切り替えるか期間を短くしてください。</div>';return}
+ if(!buckets.length){grid.innerHTML='<div class="empty">期間内の集計対象がありません</div>';return}
+ const {seriesMap,keys}=collectReportSeries(start,end,procFilter,reportChartMode);
+ if(!keys.length){grid.innerHTML='<div class="empty">指定した期間に該当するデータはありません</div>';return}
  const gw=grid.clientWidth||600;
  const cardW=gw>=950?Math.floor((gw-12)/2)-26:Math.max(300,gw-26);
  grid.innerHTML=keys.map(k=>{
   const s=seriesMap[k];
-  const pts=buckets.map(b=>{const v=s.buckets[b.key]||{qty:0,w:0,cnt:0};return {...b,qty:v.qty,w:Math.round(v.w*10)/10,cnt:v.cnt}});
+  const pts=buckets.map(b=>{const v=bucketTotals(s.buckets[b.key]);return {...b,qty:v.qty,w:Math.round(v.w*10)/10,cnt:v.cnt}});
   const tq=pts.reduce((a,p)=>a+p.qty,0),tw=Math.round(pts.reduce((a,p)=>a+p.w,0)*10)/10,tc=pts.reduce((a,p)=>a+p.cnt,0);
   const peak=pts.reduce((best,p)=>p.w>best.w||(p.w===best.w&&p.qty>best.qty)?p:best,pts[0]);
   return `<div class="rep-chart-card"><div class="rep-chart-head"><h3>${esc(s.title)}</h3><div class="rep-chart-sum">${tc}件 ／ <b class="w">${fmt(tw)} kg</b> ／ <b class="q">${fmt(tq)}枚</b></div></div><div class="rep-chart-readout">最大：${esc(peak.label)}（${fmt(peak.w)} kg ／ ${fmt(peak.qty)}枚）</div><div class="rep-chart-scroll">${renderComboSvg(pts,cardW,reportChartMode)}</div></div>`;
  }).join("");
+}
+async function exportReportCsv(){
+ const msgEl=$("reportCsvMsg"),btn=$("reportCsvBtn");
+ const start=$("reportChartStart")?.value||"",end=$("reportChartEnd")?.value||"";
+ const procFilter=$("reportChartProc")?.value||"",csvType=$("reportCsvType")?.value||"detail";
+ if(!start||!end){if(msgEl)msgEl.textContent="開始日と終了日を指定してください。";return}
+ if(start>end){if(msgEl)msgEl.textContent="開始日は終了日以前の日付を指定してください。";return}
+ if(window.Sync&&window.Sync.on&&window.Sync.ensureReportRange){
+  if(btn)btn.disabled=true;
+  if(msgEl)msgEl.textContent="指定期間のデータ・アーカイブを確認中...";
+  try{await window.Sync.ensureReportRange(start,end,false)}catch(e){}
+  updateReportSyncStatus();
+  if(btn)btn.disabled=false;
+ }
+ const {seriesMap,keys}=collectReportSeries(start,end,procFilter,reportChartMode);
+ const dateCol=reportChartMode==="month"?"年月":"日付";
+ const out=csvType==="summary"
+  ?[["項目","基準",dateCol,"件数","枚数","重量(kg)"]]
+  :[["項目","基準",dateCol,"材質","板厚(mm)","枚数","重量(kg)"]];
+ keys.forEach(k=>{
+  const s=seriesMap[k];
+  const dKeys=Object.keys(s.buckets).sort();
+  dKeys.forEach(dk=>{
+   const b=s.buckets[dk];
+   if(csvType==="summary"){
+    const tot=bucketTotals(b);
+    if(!tot.cnt&&!tot.qty&&!tot.w)return;
+    out.push([s.itemName,s.basis,dk,tot.cnt,tot.qty,Math.round(tot.w*10)/10]);
+   }else{
+    const rows=Object.values(b.mats||{}).sort((a,b2)=>String(a.mat||"").localeCompare(String(b2.mat||""),"ja")||((a.t===null||a.t===""?1e9:Number(a.t))-(b2.t===null||b2.t===""?1e9:Number(b2.t))));
+    if(!rows.length&&b.cnt>0){
+     out.push([s.itemName,s.basis,dk,"材質未設定","板厚未設定",0,0]);
+    }else{
+     rows.forEach(r=>{
+      const thk=(r.t===null||r.t==="")?"板厚未設定":r.t;
+      out.push([s.itemName,s.basis,dk,r.mat||"材質未設定",thk,num(r.qty),Math.round(num(r.w)*10)/10]);
+     });
+    }
+   }
+  });
+ });
+ if(out.length<=1){
+  if(msgEl)msgEl.textContent="指定した期間・項目に該当する日報データがありません。";
+  return;
+ }
+ const procSel=$("reportChartProc");
+ const itemLabel=(procSel&&procSel.selectedOptions&&procSel.selectedOptions[0])?procSel.selectedOptions[0].textContent:"すべて";
+ const slug=(procFilter?procFilter.replace("|","-"):"all").replace(/[\\/:*?"<>|\s]+/g,"_");
+ const unitSlug=reportChartMode==="month"?"month":"day";
+ const csv="\uFEFF"+out.map(r=>r.map(csvEscape).join(",")).join("\r\n");
+ const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+ const a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);
+ a.download=`nippo_${slug}_${unitSlug}_${start}_${end}.csv`;
+ document.body.appendChild(a);a.click();
+ setTimeout(()=>{a.remove();URL.revokeObjectURL(a.href)},1500);
+ const typeLabel=csvType==="summary"?"項目別合計":"材質・板厚別明細";
+ if(msgEl)msgEl.textContent=`「${itemLabel}」の${typeLabel}CSVを出力しました（${start} ～ ${end}：${out.length-1}行）。`;
 }
 function setReportChartMode(m){
  reportChartMode=m;
@@ -1699,6 +1771,7 @@ window.setReportChartPreset=preset=>{
  $("reportChartProc").addEventListener("change",renderReportCharts);
  $("repModeDay").addEventListener("click",()=>setReportChartMode("day"));
  $("repModeMonth").addEventListener("click",()=>setReportChartMode("month"));
+ $("reportCsvBtn").addEventListener("click",exportReportCsv);
 }
 EDIT_MQ.addEventListener&&EDIT_MQ.addEventListener("change",()=>{document.body.classList.toggle("no-edit-notes",!canEditNotes());renderStages()});
 document.body.classList.toggle("no-edit-notes",!canEditNotes());
