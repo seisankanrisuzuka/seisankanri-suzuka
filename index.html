@@ -199,6 +199,13 @@ body.on-stage main{padding:4px 8px}
 #deliveryBoardPanel .stage-toolbar{margin:2px 0;gap:4px;display:flex;flex-wrap:wrap;align-items:center}
 #deliveryBoardPanel .stage-toolbar .btn{padding:4px 8px;font-size:11px}
 .dl-legend{margin:0 0 0 4px!important;font-size:11px}
+.dl-method-bar{flex:1 1 100%;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:4px 8px;margin:2px 0 4px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;font-size:11.5px}
+.dl-method-bar .dl-mb-title{font-weight:700;color:#334155;white-space:nowrap}
+.dl-method-bar .dl-mb-item{display:inline-flex;align-items:center;gap:4px;margin:0;cursor:pointer;font-weight:500;color:#0f172a;white-space:nowrap}
+.dl-method-bar .dl-mb-item input{width:auto;margin:0;cursor:pointer}
+.dl-method-bar .dl-mb-actions{display:inline-flex;gap:4px;align-items:center}
+.dl-method-bar .dl-mb-actions .btn{padding:2px 7px;font-size:11px}
+.dl-method-bar .dl-mb-count{margin-left:auto;font-size:11px;color:#475569;white-space:nowrap}
 #deliveryBoardTable{flex:1 1 100%;min-width:0}
 #eventDetails>summary{cursor:pointer;font-weight:700;font-size:13px}
 #eventDetails[open]>summary{margin-bottom:8px}
@@ -446,8 +453,8 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261122g"></script>
-  <script src="sync.js?v=20261122g"></script>
+  <script src="firebase-config.js?v=20261122j"></script>
+  <script src="sync.js?v=20261122j"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -539,7 +546,7 @@ body.on-stage .arch-toggle span{display:none}
 <div class="panel"><h2>積み込み一覧</h2><div id="loadTable" class="tablewrap"></div></div>
 </section>
 <section id="delivery" class="page">
-<div class="panel" id="deliveryBoardPanel"><h2>配達表</h2><p class="help">編集できるのは「備考」「登録番号」「伝票番号」です。備考は元のリストと連動します。登録番号・伝票番号は配達表だけに保存されます。その他の項目は元のリストから自動表示されます。行の順番・メモは配達表専用で保存されます。</p><div class="stage-toolbar no-print"><button class="btn small" id="addDeliveryMemoBtn">メモ行を追加</button><label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155">日付<input type="date" id="deliveryTitleDate" style="width:auto;padding:3px 6px;font-size:11px"></label><label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155">拠点<select id="deliveryTitleSite" style="width:auto;padding:3px 6px;font-size:11px"><option value="本社">本社</option><option value="亀山">亀山</option></select></label><button class="btn small secondary" id="printDeliveryBtn">配達表を印刷</button><button class="btn small teal" id="exportDeliveryXlsxBtn">配達表をエクセル出力</button><span id="deliveryXlsxMsg" class="help"></span><span class="help dl-legend">製造状況：灰＝未開始 青＝開始 緑＝完了（切断・バンドソー・キリ穴・ショット・開先・曲げ）</span></div><div id="deliveryBoardTable" class="tablewrap"></div></div>
+<div class="panel" id="deliveryBoardPanel"><h2>配達表</h2><p class="help">編集できるのは「備考」「登録番号」「伝票番号」です。備考は元のリストと連動します。登録番号・伝票番号は配達表だけに保存されます。その他の項目は元のリストから自動表示されます。行の順番・メモは配達表専用で保存されます。</p><div class="stage-toolbar no-print"><button class="btn small" id="addDeliveryMemoBtn">メモ行を追加</button><label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155">日付<input type="date" id="deliveryTitleDate" style="width:auto;padding:3px 6px;font-size:11px"></label><label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155">拠点<select id="deliveryTitleSite" style="width:auto;padding:3px 6px;font-size:11px"><option value="本社">本社</option><option value="亀山">亀山</option></select></label><button class="btn small secondary" id="printDeliveryBtn">配達表を印刷</button><button class="btn small teal" id="exportDeliveryXlsxBtn">配達表をエクセル出力</button><span id="deliveryXlsxMsg" class="help"></span><span class="help dl-legend">製造状況：灰＝未開始 青＝開始 緑＝完了（切断・バンドソー・キリ穴・ショット・開先・曲げ）</span></div><div id="deliveryMethodFilterBar" class="dl-method-bar no-print"></div><div id="deliveryBoardTable" class="tablewrap"></div></div>
 <details class="panel no-print" id="eventDetails"><summary>配送イベント登録（タップで開く）</summary><p class="help">外注先からの持ち込み、客先への納品などを登録できます。</p><div class="row"><div class="field"><label>日付</label><input id="eventDate" type="date"></div><div class="field"><label>需要家</label><input id="eventCustomer" placeholder="需要家"></div></div><div class="row"><div class="field"><label>工事名</label><input id="eventJob" placeholder="工事名"></div><div class="field"><label>訪問先</label><input id="eventDestination" placeholder="訪問先"></div></div><div class="row"><div class="field"><label>登録番号</label><input id="eventSlip" placeholder="登録番号"></div><div class="field"><label>伝票番号</label><input id="eventSales" placeholder="伝票番号"></div></div><div class="row"><div class="field"><label>備考</label><input id="eventNote" placeholder="備考"></div></div><div class="btn-bar"><button class="btn" id="addEventBtn">イベント登録</button></div><div id="eventMsg" class="help"></div></details>
 <div class="panel print-only" style="display:none"><h2>配達表</h2><div id="deliveryPrintTable"></div></div>
 </section>
@@ -1267,7 +1274,56 @@ function normalizeDestParts(raw){
 }
 /* 配達表の並び：納期（日付）の早い順 → 同じ納期の中で同じ納入先（全角半角・漢数字・カッコ内工場名の表記ゆれを吸収）を連続させる。メモ行は今の行位置に残し、それ以外を並び替えて空いた位置に入れる */
 function deliveryAutoSort(board,byKey){const items=board.filter(x=>x.memo===undefined&&byKey.has(x.key));const dk=x=>String(x.date||"9999-99-99");items.sort((a,b)=>{const A=byKey.get(a.key),B=byKey.get(b.key),da=normalizeDestParts(A.destination),db=normalizeDestParts(B.destination);return dk(A).localeCompare(dk(B))||da.base.localeCompare(db.base,"ja",{numeric:true})||(A.type===B.type?0:A.type==="list"?-1:1)||da.sub.localeCompare(db.sub,"ja",{numeric:true})||String(A.serial||A.key).localeCompare(String(B.serial||B.key))});let k=0;return board.map(x=>x.memo===undefined&&byKey.has(x.key)?items[k++]:x)}
-function deliveryEntries(){let base=activeLists().map(l=>({key:"L:"+l.serial,type:"list",serial:l.serial,date:dueStart(l),customer:l.customer||"",job:l.job||"",destination:l.destination||"",dateLabel:dueLabel(l),cut:cutLabel(l),qty:total(l,"qty"),procPrint:printProcessList(l),procText:printProcessText(l),mfg:mfgBadge(l,true)+processStatusChips(l,true),weight:total(l,"weight"),maxSize:maxSizeLabel(l),slip:(deliveryMeta["L:"+l.serial]||{}).slip||"",sales:(deliveryMeta["L:"+l.serial]||{}).sales||"",note:l.deliveryNote!==undefined?l.deliveryNote:longSizeNote(l),method:l.deliveryMethod||""})).concat(deliveryEvents.map(e=>({key:"E:"+e.id,type:"event",event:e,serial:e.serial,date:e.date,dateLabel:shortDate(e.date)||"－",customer:e.customer||"",job:e.job||e.type||(lists.find(l=>l.serial===e.serial)?.job||""),destination:e.destination,cut:"－",qty:"",weight:"",maxSize:"－",slip:(deliveryMeta["E:"+e.id]||{}).slip||"",sales:(deliveryMeta["E:"+e.id]||{}).sales||"",note:e.note||"",method:e.type})));let byKey=new Map(base.map(x=>[x.key,x]));let known=new Set(deliveryBoard.filter(x=>x.key).map(x=>x.key));base.filter(x=>!known.has(x.key)).sort((a,b)=>String(a.date||"9999").localeCompare(String(b.date||"9999"))).forEach(x=>deliveryBoard.push({key:x.key}));deliveryBoard=deliveryBoard.filter(x=>x.memo!==undefined||byKey.has(x.key));deliveryBoard=deliveryAutoSort(deliveryBoard,byKey);return deliveryBoard.map(x=>x.memo!==undefined?x:byKey.get(x.key))}
+const DELIVERY_METHODS_ORDER=["配達","本社引取","亀山引取","宅配便","傭車(宵積み)","傭車(当日積み)","外注先から直送",""];
+const DELIVERY_METHOD_FILTER_KEY="factory_link_delivery_method_excl_v1";
+let deliveryMethodExcluded=new Set();
+try{const saved=JSON.parse(localStorage.getItem(DELIVERY_METHOD_FILTER_KEY)||"null");if(Array.isArray(saved))deliveryMethodExcluded=new Set(saved.map(x=>String(x??"")));}catch(e){}
+function persistDeliveryMethodFilter(){try{localStorage.setItem(DELIVERY_METHOD_FILTER_KEY,JSON.stringify([...deliveryMethodExcluded]))}catch(e){}}
+function allDeliveryMethodOptions(entries){
+ const opts=[...DELIVERY_METHODS_ORDER],seen=new Set(opts);
+ (entries||[]).forEach(x=>{if(x&&x.memo===undefined){const m=String(x.method||"");if(!seen.has(m)){seen.add(m);opts.splice(opts.length-1,0,m);}}});
+ return opts;
+}
+function isDeliveryMethodFilterActive(opts){return opts.some(m=>deliveryMethodExcluded.has(m))}
+function filterDeliveryByMethod(entries){
+ const opts=allDeliveryMethodOptions(entries);
+ if(!isDeliveryMethodFilterActive(opts))return entries;
+ return entries.filter(x=>x.memo===undefined&&!deliveryMethodExcluded.has(String(x.method||"")));
+}
+function deliveryMethodFilterLabel(entries){
+ const opts=allDeliveryMethodOptions(entries);
+ if(!isDeliveryMethodFilterActive(opts))return"";
+ const sel=opts.filter(m=>!deliveryMethodExcluded.has(m)).map(m=>m||"未指定");
+ return sel.length?sel.join("・"):"なし";
+}
+function toggleDeliveryMethodFilter(method,checked){
+ if(checked)deliveryMethodExcluded.delete(method);else deliveryMethodExcluded.add(method);
+ persistDeliveryMethodFilter();renderDeliveryBoard();
+}
+function setAllDeliveryMethodFilters(selectAll){
+ const opts=allDeliveryMethodOptions(deliveryEntries());
+ if(selectAll)deliveryMethodExcluded.clear();else deliveryMethodExcluded=new Set(opts);
+ persistDeliveryMethodFilter();renderDeliveryBoard();
+}
+function renderDeliveryMethodFilterBar(allEntries,filteredEntries){
+ const bar=$("deliveryMethodFilterBar");if(!bar)return;
+ const opts=allDeliveryMethodOptions(allEntries);
+ const counts=new Map();
+ allEntries.forEach(x=>{if(x&&x.memo===undefined){const m=String(x.method||"");counts.set(m,(counts.get(m)||0)+1);}});
+ const totalItems=allEntries.filter(x=>x&&x.memo===undefined).length;
+ const shownItems=filteredEntries.filter(x=>x&&x.memo===undefined).length;
+ const checkboxes=opts.map(m=>{
+  const label=m||"未指定";
+  const checked=!deliveryMethodExcluded.has(m);
+  const c=counts.get(m)||0;
+  return `<label class="dl-mb-item"><input type="checkbox" value="${esc(m)}" ${checked?"checked":""} onchange="toggleDeliveryMethodFilter(this.value,this.checked)"><span>${esc(label)}${c?`(${c})`:""}</span></label>`;
+ }).join("");
+ const countText=isDeliveryMethodFilterActive(opts)?`表示中：${shownItems}件 / 全${totalItems}件`:`全${totalItems}件`;
+ bar.innerHTML=`<span class="dl-mb-title">配送方法：</span><span class="dl-mb-actions"><button type="button" class="btn small secondary" onclick="setAllDeliveryMethodFilters(true)">全選択</button><button type="button" class="btn small secondary" onclick="setAllDeliveryMethodFilters(false)">全解除</button></span>${checkboxes}<span class="dl-mb-count">${esc(countText)}</span>`;
+}
+window.toggleDeliveryMethodFilter=toggleDeliveryMethodFilter;
+window.setAllDeliveryMethodFilters=setAllDeliveryMethodFilters;
+function deliveryEntries(){let base=activeLists().map(l=>({key:"L:"+l.serial,type:"list",serial:l.serial,date:dueStart(l),customer:l.customer||"",job:l.job||"",destination:l.destination||"",dateLabel:dueLabel(l),cut:cutLabel(l),qty:total(l,"qty"),procPrint:printProcessList(l),procText:printProcessText(l),mfg:mfgBadge(l,true)+processStatusChips(l,true),weight:total(l,"weight"),maxSize:maxSizeLabel(l),slip:(deliveryMeta["L:"+l.serial]||{}).slip||"",sales:(deliveryMeta["L:"+l.serial]||{}).sales||"",note:l.deliveryNote!==undefined?l.deliveryNote:longSizeNote(l),method:l.deliveryMethod||""})).concat(deliveryEvents.map(e=>({key:"E:"+e.id,type:"event",event:e,serial:e.serial,date:e.date,dateLabel:shortDate(e.date)||"－",customer:e.customer||"",job:e.job||e.type||(lists.find(l=>l.serial===e.serial)?.job||""),destination:e.destination,cut:"－",qty:"",weight:"",maxSize:"－",slip:(deliveryMeta["E:"+e.id]||{}).slip||"",sales:(deliveryMeta["E:"+e.id]||{}).sales||"",note:e.note||"",method:e.type})));let byKey=new Map(base.map(x=>[x.key,x]));let known=new Set(deliveryBoard.filter(x=>x.key).map(x=>x.key));base.filter(x=>!known.has(x.key)).sort((a,b)=>String(a.date||"9999").localeCompare(String(b.date||"9999"))).forEach(x=>deliveryBoard.push({key:x.key}));deliveryBoard=deliveryBoard.filter(x=>x.memo!==undefined||byKey.has(x.key));deliveryBoard=deliveryAutoSort(deliveryBoard,byKey);return deliveryBoard.map((x,idx)=>x.memo!==undefined?{...x,_boardIndex:idx}:{...byKey.get(x.key),_boardIndex:idx})}
 function moveDelivery(index,delta){let j=index+delta;if(j<0||j>=deliveryBoard.length)return;[deliveryBoard[index],deliveryBoard[j]]=[deliveryBoard[j],deliveryBoard[index]];persistDelivery();renderDeliveryBoard()}
 function addDeliveryMemo(){let text=prompt("配達表に挿入するメモを入力してください");if(text===null)return;let pos=prompt(`挿入位置を入力してください（1〜${deliveryBoard.length+1}、空欄なら最後）`,String(deliveryBoard.length+1));if(pos===null)return;let index=pos.trim()===""?deliveryBoard.length:Math.max(0,Math.min(deliveryBoard.length,Number(pos)-1));deliveryBoard.splice(index,0,{key:"M:"+Date.now()+Math.floor(Math.random()*1000),memo:text});persistDelivery();renderDeliveryBoard()}
 function deleteDeliveryMemo(key){if(!confirm("このメモを削除しますか？"))return;deliveryBoard=deliveryBoard.filter(x=>!(x.memo!==undefined&&x.key===key));persistDelivery();renderDeliveryBoard()}
@@ -1276,16 +1332,16 @@ function editDeliveryField(key,field,value){let prefix=key.slice(0,2),id=key.sli
 function cutShortLabel(cut){const s=String(cut||"").trim();if(!s||s==="未指定"||s==="－")return"－";const m={"ガス":"ガ","プラズマ":"プ","レーザー":"レ","シャーリング":"シ","外注":"外"};return m[s]||s.slice(0,1)}
 function deliveryGroupKey(x){if(!x||x.memo!==undefined||x.type!=="list")return"";const d=String(x.date||"").trim(),{base,sub}=normalizeDestParts(x.destination);return(!d||!base)?"":d+"\u0001"+base+"\u0001"+sub}
 function deliveryGroupRuns(entries){const startMap=new Map(),skipSet=new Set(),rowMeta=new Map();let i=0;while(i<entries.length){const k=deliveryGroupKey(entries[i]);if(!k){i++;continue}let j=i+1,sumW=num(entries[i].weight);while(j<entries.length&&deliveryGroupKey(entries[j])===k){sumW+=num(entries[j].weight);j++}const len=j-i;if(len>=2){const grp={len,sumW:Math.round(sumW*10)/10,startIdx:i,endIdx:j-1};startMap.set(i,grp);for(let p=i;p<j;p++){rowMeta.set(p,{...grp,isTop:p===i,isBot:p===j-1});if(p>i)skipSet.add(p)}}i=j}return{startMap,skipSet,rowMeta}}
-function renderDeliveryBoard(){refreshEventSelect();let entries=deliveryEntries();const {startMap,skipSet,rowMeta}=deliveryGroupRuns(entries);const mvb=i=>`<span class="dl-moves"><button class="btn small secondary" onclick="moveDelivery(${i},-1)">↑</button><button class="btn small secondary" onclick="moveDelivery(${i},1)">↓</button></span>`;let dlNo=0;let html=entries.map((x,i)=>{if(x.memo!==undefined)return `<tr class="memo-row" draggable="true" ondragstart="deliveryDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${i})"><td class="dl-mv">${mvb(i)}</td><td colspan="15"><div class="memo-flex"><b>メモ</b><input value="${esc(x.memo)}" onchange="updateDeliveryMemo('${x.key}',this.value)"><button class="btn small secondary" style="color:#b91c1c" onclick="deleteDeliveryMemo('${x.key}')">削除</button></div></td></tr>`;let k=x.key;const isList=x.type==="list";const tt=v=>`title="${esc(v||"")}"`;const maxs=String(x.maxSize||"－").replace(/^最大サイズ\s*/,"").replace(/\s*mm$/i,"");const cutInit=isList?cutShortLabel(x.cut):"－";const grp=startMap.get(i),rm=rowMeta.get(i);const tbCls=rm?`${rm.isTop?" grp-top":""}${rm.isBot?" grp-bot":""}`:"";const destCls=rm?` grp-left${tbCls}`:"";const gwtCell=skipSet.has(i)?"":(grp?`<td class="dl-gwt grp-gwt" rowspan="${grp.len}">${fmt(grp.sumW)} kg</td>`:`<td class="dl-gwt"></td>`);return `<tr class="drag-row" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${i})"><td class="dl-mv dl-no">${++dlNo}</td><td class="dl-date">${esc(x.dateLabel||x.date||"")}${isList?"":`<input type="date" class="dl-datepick" value="${esc(x.date||"")}" title="日付を変更" onclick="try{this.showPicker()}catch(e){}" onchange="editDeliveryField('${k}','date',this.value)">`}</td><td class="dl-method" ${tt(x.method||"")}>${esc(x.method||"－")}</td><td class="dl-serial">${isList?`<span class="badge">${esc(x.serial)}</span>`:`<span class="badge blue" title="配送イベント">${esc(x.event.id)}</span>${x.event.serial?` <span class="help">工程番号 ${esc(x.event.serial)}</span>`:""}`}</td><td class="dl-cust" ${isList?tt(x.customer):""}>${isList?esc(x.customer):`<input value="${esc(x.customer)}" onchange="editDeliveryField('${k}','customer',this.value)">`}</td><td class="dl-job" ${isList?tt(x.job):""}>${isList?esc(x.job):`<input value="${esc(x.job)}" onchange="editDeliveryField('${k}','job',this.value)">`}</td><td class="dl-dest${destCls}" ${isList?tt(x.destination):""}>${isList?esc(x.destination):`<input value="${esc(x.destination)}" onchange="editDeliveryField('${k}','destination',this.value)">`}</td><td class="dl-qty${tbCls}">${isList?fmt(x.qty)+" 枚":"－"}</td><td class="dl-wt${tbCls}">${isList?fmt(x.weight)+" kg":"－"}</td>${gwtCell}<td class="dl-max">${esc(maxs)}</td><td class="dl-slip"><input value="${esc(x.slip)}" placeholder="登録番号" onchange="editDeliveryField('${k}','slip',this.value)"></td><td class="dl-sales"><input value="${esc(x.sales)}" placeholder="伝票番号" onchange="editDeliveryField('${k}','sales',this.value)"></td><td class="dl-note"><input value="${esc(x.note)}" placeholder="備考" onchange="editDeliveryField('${k}','note',this.value)"></td><td class="dl-cut" ${isList?tt(x.cut):""}>${esc(cutInit)}</td><td class="dl-mfg">${isList?`<span class="cut-inline">${esc(cutInit)}</span>`+(x.mfg||"－"):"－"}</td></tr>`}).join("");$("deliveryBoardTable").innerHTML=html?`<table class="dl-table"><thead><tr><th>No.</th><th>納期</th><th>配送方法</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先</th><th>枚数</th><th>角重量</th><th>合計重量</th><th>最大サイズ</th><th>登録番号</th><th>伝票番号</th><th>備考</th><th>切断</th><th>製造状況</th></tr></thead><tbody>${html}</tbody></table>`:'<div class="empty">配送データがありません</div>'}
+function renderDeliveryBoard(){refreshEventSelect();const allEntries=deliveryEntries();const entries=filterDeliveryByMethod(allEntries);renderDeliveryMethodFilterBar(allEntries,entries);const {startMap,skipSet,rowMeta}=deliveryGroupRuns(entries);const mvb=i=>`<span class="dl-moves"><button class="btn small secondary" onclick="moveDelivery(${i},-1)">↑</button><button class="btn small secondary" onclick="moveDelivery(${i},1)">↓</button></span>`;let dlNo=0;let html=entries.map((x,i)=>{const bIdx=x._boardIndex??i;if(x.memo!==undefined)return `<tr class="memo-row" draggable="true" ondragstart="deliveryDragStart(event,${bIdx})" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${bIdx})"><td class="dl-mv">${mvb(bIdx)}</td><td colspan="15"><div class="memo-flex"><b>メモ</b><input value="${esc(x.memo)}" onchange="updateDeliveryMemo('${x.key}',this.value)"><button class="btn small secondary" style="color:#b91c1c" onclick="deleteDeliveryMemo('${x.key}')">削除</button></div></td></tr>`;let k=x.key;const isList=x.type==="list";const tt=v=>`title="${esc(v||"")}"`;const maxs=String(x.maxSize||"－").replace(/^最大サイズ\s*/,"").replace(/\s*mm$/i,"");const cutInit=isList?cutShortLabel(x.cut):"－";const grp=startMap.get(i),rm=rowMeta.get(i);const tbCls=rm?`${rm.isTop?" grp-top":""}${rm.isBot?" grp-bot":""}`:"";const destCls=rm?` grp-left${tbCls}`:"";const gwtCell=skipSet.has(i)?"":(grp?`<td class="dl-gwt grp-gwt" rowspan="${grp.len}">${fmt(grp.sumW)} kg</td>`:`<td class="dl-gwt"></td>`);return `<tr class="drag-row" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${bIdx})"><td class="dl-mv dl-no">${++dlNo}</td><td class="dl-date">${esc(x.dateLabel||x.date||"")}${isList?"":`<input type="date" class="dl-datepick" value="${esc(x.date||"")}" title="日付を変更" onclick="try{this.showPicker()}catch(e){}" onchange="editDeliveryField('${k}','date',this.value)">`}</td><td class="dl-method" ${tt(x.method||"")}>${esc(x.method||"－")}</td><td class="dl-serial">${isList?`<span class="badge">${esc(x.serial)}</span>`:`<span class="badge blue" title="配送イベント">${esc(x.event.id)}</span>${x.event.serial?` <span class="help">工程番号 ${esc(x.event.serial)}</span>`:""}`}</td><td class="dl-cust" ${isList?tt(x.customer):""}>${isList?esc(x.customer):`<input value="${esc(x.customer)}" onchange="editDeliveryField('${k}','customer',this.value)">`}</td><td class="dl-job" ${isList?tt(x.job):""}>${isList?esc(x.job):`<input value="${esc(x.job)}" onchange="editDeliveryField('${k}','job',this.value)">`}</td><td class="dl-dest${destCls}" ${isList?tt(x.destination):""}>${isList?esc(x.destination):`<input value="${esc(x.destination)}" onchange="editDeliveryField('${k}','destination',this.value)">`}</td><td class="dl-qty${tbCls}">${isList?fmt(x.qty)+" 枚":"－"}</td><td class="dl-wt${tbCls}">${isList?fmt(x.weight)+" kg":"－"}</td>${gwtCell}<td class="dl-max">${esc(maxs)}</td><td class="dl-slip"><input value="${esc(x.slip)}" placeholder="登録番号" onchange="editDeliveryField('${k}','slip',this.value)"></td><td class="dl-sales"><input value="${esc(x.sales)}" placeholder="伝票番号" onchange="editDeliveryField('${k}','sales',this.value)"></td><td class="dl-note"><input value="${esc(x.note)}" placeholder="備考" onchange="editDeliveryField('${k}','note',this.value)"></td><td class="dl-cut" ${isList?tt(x.cut):""}>${esc(cutInit)}</td><td class="dl-mfg">${isList?`<span class="cut-inline">${esc(cutInit)}</span>`+(x.mfg||"－"):"－"}</td></tr>`}).join("");$("deliveryBoardTable").innerHTML=html?`<table class="dl-table"><thead><tr><th>No.</th><th>納期</th><th>配送方法</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先</th><th>枚数</th><th>角重量</th><th>合計重量</th><th>最大サイズ</th><th>登録番号</th><th>伝票番号</th><th>備考</th><th>切断</th><th>製造状況</th></tr></thead><tbody>${html}</tbody></table>`:`<div class="empty">${allEntries.length?"選択した配送方法に一致する配送データはありません":"配送データがありません"}</div>`}
 let draggedDeliveryIndex=null;function deliveryDragStart(e,index){draggedDeliveryIndex=index;e.dataTransfer.effectAllowed="move"}function deliveryDrop(e,index){e.preventDefault();if(draggedDeliveryIndex===null||draggedDeliveryIndex===index)return;const [item]=deliveryBoard.splice(draggedDeliveryIndex,1);deliveryBoard.splice(index,0,item);draggedDeliveryIndex=null;persistDelivery();renderDeliveryBoard()}
 window.moveDelivery=moveDelivery;window.updateDeliveryMemo=updateDeliveryMemo;window.editDeliveryField=editDeliveryField;window.deliveryDragStart=deliveryDragStart;window.deliveryDrop=deliveryDrop;
 $("addEventBtn").onclick=addDeliveryEvent;$("addDeliveryMemoBtn").onclick=addDeliveryMemo;
-function renderDeliverySearch(){const start=$("deliveryStart").value,end=$("deliveryEnd").value,method=$("deliveryMethodSearch").value,job=($("deliveryJobSearch").value||"").trim().toLowerCase(),dest=($("deliveryDestSearch").value||"").trim().toLowerCase();const data=lists.filter(l=>(!start&&!end||overlapsDue(l,start,end))&&(!method||String(l.deliveryMethod||"")===method)&&(!job||String(l.job||"").toLowerCase().includes(job))&&(!dest||String(l.destination||"").toLowerCase().includes(dest))).sort((a,b)=>dueStart(a).localeCompare(dueStart(b)));const eventData=deliveryEvents.filter(e=>(!start&&!end||(!start||e.date>=start)&&(!end||e.date<=end))&&(!method||String(e.type||"")===method)&&(!job||`${e.type||""} ${e.job||""} ${e.customer||""} ${lists.find(l=>l.serial===e.serial)?.job||""}`.toLowerCase().includes(job))&&(!dest||String(e.destination||"").toLowerCase().includes(dest))).sort((a,b)=>String(a.date).localeCompare(String(b.date)));const rows=data.map(l=>`<tr><td>${esc(dueLabel(l))}</td><td>${esc(l.deliveryMethod||"未指定")}</td><td>${esc(l.customer||"")}</td><td>${esc(l.job||"")}</td><td>${esc(l.destination||"")}</td><td>${esc(l.cutMethod||l.rows?.find(r=>r.processType)?.processType||"未指定")}</td><td>${fmt(total(l,"weight"))} kg</td><td>${loaded(l)} / ${l.piles==null?"未登録":fmt(l.piles)+"山"}</td></tr>`).concat(eventData.map(e=>`<tr><td>${esc(e.date)}</td><td>イベント</td><td>${esc(e.customer||"－")}</td><td>${esc(e.job||e.type||"")}（イベント ${esc(e.id)}）</td><td>${esc(e.destination)}</td><td>－</td><td>－</td><td>${e.serial?"工程番号 "+esc(e.serial):"－"}</td></tr>`));$("deliverySearchResults").innerHTML=table(["納期・日付","配送方法・種別","需要家","工事名・イベント","納入先・訪問先","切断方法","角重量","積込状況・紐付け"],rows);paginateTable("deliverySearchResults","deliverySearch")}
+function renderDeliverySearch(){const start=$("deliveryStart").value,end=$("deliveryEnd").value,method=$("deliveryMethodSearch").value,job=($("deliveryJobSearch").value||"").trim().toLowerCase(),dest=($("deliveryDestSearch").value||"").trim().toLowerCase();const data=lists.filter(l=>(!start&&!end||overlapsDue(l,start,end))&&(!method||String(l.deliveryMethod||"")===method)&&(!job||String(l.job||"").toLowerCase().includes(job))&&(!dest||String(l.destination||"").toLowerCase().includes(dest))).sort((a,b)=>dueStart(a).localeCompare(dueStart(b)));const eventData=deliveryEvents.filter(e=>(!start&&!end||(!start||e.date>=start)&&(!end||e.date<=end))&&(!method||String(e.type||"")===method)&&(!job||`${e.type||""} ${e.job||""} ${e.customer||""} ${lists.find(l=>l.serial===e.serial)?.job||""}`.toLowerCase().includes(job))&&(!dest||String(e.destination||"").toLowerCase().includes(dest))).sort((a,b)=>String(a.date).localeCompare(String(b.date)));const rows=data.map(l=>`<tr><td>${esc(dueLabel(l))}</td><td>${esc(l.deliveryMethod||"未指定")}</td><td>${esc(l.customer||"")}</td><td>${esc(l.job||"")}</td><td>${esc(l.destination||"")}</td><td>${esc(l.cutMethod||l.rows?.find(r=>r.processType)?.processType||"未指定")}</td><td>${fmt(total(l,"weight"))} kg</td><td>${loaded(l)} / ${l.piles==null?"未登録":fmt(l.piles)+"山"}</td><td>${esc((l.deliveryNote!==undefined?l.deliveryNote:longSizeNote(l))||"")}</td></tr>`).concat(eventData.map(e=>`<tr><td>${esc(e.date)}</td><td>イベント</td><td>${esc(e.customer||"－")}</td><td>${esc(e.job||e.type||"")}（イベント ${esc(e.id)}）</td><td>${esc(e.destination)}</td><td>－</td><td>－</td><td>${e.serial?"工程番号 "+esc(e.serial):"－"}</td><td>${esc(e.note||"")}</td></tr>`));$("deliverySearchResults").innerHTML=table(["納期・日付","配送方法・種別","需要家","工事名・イベント","納入先・訪問先","切断方法","角重量","積込状況・紐付け","備考"],rows);paginateTable("deliverySearchResults","deliverySearch")}
 $("deliverySearchBtn").onclick=renderDeliverySearch;["deliveryStart","deliveryEnd","deliveryMethodSearch","deliveryJobSearch","deliveryDestSearch"].forEach(id=>$(id).addEventListener("input",renderDeliverySearch));$("deliverySearchClear").onclick=()=>{["deliveryStart","deliveryEnd","deliveryJobSearch","deliveryDestSearch"].forEach(id=>$(id).value="");$("deliveryMethodSearch").value="";renderDeliverySearch()};
 /* 配達表専用の印刷：キリ穴など工程印刷（#stagePrintArea）とは別の領域・別の処理を使う */
 /* 印刷の向きを一時的に切り替える（空文字なら既定のまま） */
 function setPrintPage(size){let st=document.getElementById("printPageStyle");if(!size){st&&st.remove();return}if(!st){st=document.createElement("style");st.id="printPageStyle";document.head.appendChild(st)}st.textContent=`@page{size:${size};margin:10mm}`}
-function deliveryPrintEntries(){return deliveryEntries()}
+function deliveryPrintEntries(){return filterDeliveryByMethod(deliveryEntries())}
 const DELIVERY_SITE_KEY="factory_link_delivery_site_v1";
 {
  const dtEl=$("deliveryTitleDate"),stEl=$("deliveryTitleSite");
@@ -1302,7 +1358,9 @@ function deliveryDocTitle(){
  return {dateRaw,dateSlash,site,title:`${dateSlash} ${site}　配達表`};
 }
 function printDelivery(){
- const entries=deliveryPrintEntries();
+ const allEntries=deliveryEntries();
+ const entries=filterDeliveryByMethod(allEntries);
+ const methodLabel=deliveryMethodFilterLabel(allEntries);
  const {title}=deliveryDocTitle();
  const {startMap,skipSet,rowMeta}=deliveryGroupRuns(entries);
  let sumQty=0,sumW=0,listRowCount=0;
@@ -1321,7 +1379,7 @@ function printDelivery(){
  const totRow=listRowCount>0?`<tr style="background:#eff6ff!important;font-weight:700"><td colspan="6">合計</td><td class="num">${fmt(sumQty)} 枚</td><td class="num">${fmt(Math.round(sumW*10)/10)} kg</td><td colspan="7"></td></tr>`:"";
  let area=document.getElementById("deliveryPrintArea");
  if(!area){area=document.createElement("div");area.id="deliveryPrintArea";document.body.appendChild(area);}
- area.innerHTML=`<h1>${esc(title)}</h1><div class="print-meta">出力日：${esc(todayStr().replace(/-/g,"/"))}　／　件数：${entries.length}件</div><table><thead><tr><th>納期</th><th>配送方法</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先</th><th>枚数</th><th>角重量</th><th>合計重量</th><th>最大サイズ</th><th>登録番号</th><th>伝票番号</th><th>備考</th><th>切断</th><th>工程</th></tr></thead><tbody>${(bodyRows+totRow)||'<tr><td colspan="15">対象データはありません</td></tr>'}</tbody></table>`;
+ area.innerHTML=`<h1>${esc(title)}</h1><div class="print-meta">出力日：${esc(todayStr().replace(/-/g,"/"))}　／　件数：${entries.length}件${methodLabel?`　／　配送方法：${esc(methodLabel)}`:""}</div><table><thead><tr><th>納期</th><th>配送方法</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先</th><th>枚数</th><th>角重量</th><th>合計重量</th><th>最大サイズ</th><th>登録番号</th><th>伝票番号</th><th>備考</th><th>切断</th><th>工程</th></tr></thead><tbody>${(bodyRows+totRow)||'<tr><td colspan="15">対象データはありません</td></tr>'}</tbody></table>`;
  setPrintPage("A4 landscape");document.body.dataset.printMode="delivery";document.title=title;window.print();
 }
 function xlsxRefsExpr(colLet,rowNums){
@@ -1335,7 +1393,9 @@ function xlsxRefsExpr(colLet,rowNums){
  return parts.join(",");
 }
 function exportDeliveryExcel(){
- const entries=deliveryPrintEntries();
+ const allEntries=deliveryEntries();
+ const entries=filterDeliveryByMethod(allEntries);
+ const methodLabel=deliveryMethodFilterLabel(allEntries);
  const today=todayStr();
  const {dateRaw,site,title}=deliveryDocTitle();
  const {startMap}=deliveryGroupRuns(entries);
@@ -1343,7 +1403,7 @@ function exportDeliveryExcel(){
  const colWidths=[8.0,10.5,8.2,12.5,21.5,15.5,7.8,10.0,10.6,10.5,8.8,8.8,20.0,4.6,11.5];
  const rows=[
   {r:1,ht:20,cells:[{c:1,t:"s",v:title,st:14}]},
-  {r:2,ht:13,cells:[{c:1,t:"s",v:`出力日：${today.replace(/-/g,"/")}　／　件数：${entries.length}件`,st:15}]},
+  {r:2,ht:13,cells:[{c:1,t:"s",v:`出力日：${today.replace(/-/g,"/")}　／　件数：${entries.length}件${methodLabel?`　／　配送方法：${methodLabel}`:""}`,st:15}]},
   {r:3,ht:16,cells:headers.map((h,i)=>({c:i+1,t:"s",v:h,st:(i===6||i===7||i===8)?17:16}))}
  ];
  const merges=["A1:O1","A2:O2"];
