@@ -442,8 +442,8 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261121o"></script>
-  <script src="sync.js?v=20261121o"></script>
+  <script src="firebase-config.js?v=20261122b"></script>
+  <script src="sync.js?v=20261122b"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -589,7 +589,7 @@ body.on-stage .arch-toggle span{display:none}
 <div class="panel"><h2>切断方法別の合計</h2><p class="help">指定した納期期間内のリストを、切断方法ごとに角重量と枚数で集計します。</p><label class="inline-check" style="display:inline-flex;align-items:center;gap:7px;margin:8px 0 12px"><input id="planCutExcludeDone" type="checkbox" onchange="renderPlan()"> 切断完了を除く</label><div id="planCutSummary"></div></div>
 <div class="panel" id="planCutTimePanel"><h2>切断加工時間（切断予定日ごと）</h2>
 <div class="alert" style="margin:6px 0 10px"><b>※ 表示時間は切断時間のみです。片付け、板出し時間は含みません。</b></div>
-<p class="help">切断予定日は、工程管理で入力した「切断」の作業日です。各部品の「切断長 × 個数 ÷ 切断速度」を、材質・板厚ごとに分けて集計します（切断長はm単位の値をそのまま使います。表の「速度」の単位はm/minです）。指定した納期期間内のリストが対象です。</p>
+<p class="help">切断予定日は、工程管理で入力した「切断」の作業日です。各部品の「切断長 × 個数 ÷ 切断速度」を、材質・板厚ごとに分けて集計します（切断長はm単位の値をそのまま使います。表の「速度」の単位はm/minです）。指定した納期期間内のリストが対象です。<br><b>※切断時間はプラズマの切断速度をもとに算出しています。</b></p>
 <div class="row no-print"><div class="field"><label>切断方法で絞り込み</label><select id="planTimeCut" onchange="renderPlan()"><option value="">すべて</option><option>ガス</option><option>プラズマ</option><option>レーザー</option><option>シャーリング</option><option>外注</option><option>未指定</option></select></div></div>
 <label class="inline-check" style="display:inline-flex;align-items:center;gap:7px;margin:4px 0 10px"><input id="planTimeExcludeDone" type="checkbox" onchange="renderPlan()"> 切断完了を除く</label>
 <div id="planCutTime"></div></div>
@@ -851,16 +851,16 @@ renderCutSpeedTable();
 function renderCutTime(inRange){const el=$("planCutTime");if(!el)return;const method=$("planTimeCut")?.value||"",exDone=!!$("planTimeExcludeDone")?.checked;
  const ls=inRange.filter(l=>(l.processes||[]).map(normalizeProcessName).includes("切断")&&(!method||cutLabel(l)===method)&&(!exDone||(l.processStatus?.["切断"]||"pending")!=="done"));
  const days={};let noLen=0;
- ls.forEach(l=>{const dt=l.processDates?.["切断"]||"";(l.rows||[]).forEach(r=>{const q=num(r.qty);if(!(q>0))return;const len=numFrom(r.cutLength);if(!len){noLen++;return}const t=numFrom(r.thickness);const mat=String(r.material||"").trim()||"材質未設定";const d=days[dt]=days[dt]||{};const k=mat+"\u0001"+(t===null?"板厚未設定":String(t));const g=d[k]=d[k]||{mat,t,m:0,qty:0};g.m+=len*q;g.qty+=q})});
+ ls.forEach(l=>{const dt=l.processDates?.["切断"]||"";(l.rows||[]).forEach(r=>{const q=num(r.qty);if(!(q>0))return;const len=numFrom(r.cutLength);if(!len){noLen++;return}const t=numFrom(r.thickness);const mat=String(r.material||"").trim()||"材質未設定";const w=r.angleWeight!=null?q*num(r.angleWeight):num(r.weight);const d=days[dt]=days[dt]||{};const k=mat+"\u0001"+(t===null?"板厚未設定":String(t));const g=d[k]=d[k]||{mat,t,m:0,qty:0,w:0};g.m+=len*q;g.qty+=q;g.w+=w})});
  const dkeys=Object.keys(days).sort((a,b)=>(a||"9999").localeCompare(b||"9999"));
  if(!dkeys.length){el.innerHTML='<div class="empty">指定期間内に、切断長が入力された切断対象がありません</div>'+(noLen?`<p class="help">切断長が未入力の部品が ${noLen}件あります（時間には含みません）。</p>`:"");return}
- const rowsHtml=[];let grand=0,noSpeed=0;
- dkeys.forEach(dt=>{const groups=Object.values(days[dt]).sort((a,b)=>a.mat.localeCompare(b.mat,"ja")||(a.t??1e9)-(b.t??1e9));let sum=0,qtySum=0,mSum=0;
-  groups.forEach((g,i)=>{const sp=cutSpeedFor(g.t);const min=sp?g.m/sp:null;if(min!==null)sum+=min;else noSpeed++;qtySum+=g.qty;mSum+=g.m;
-   rowsHtml.push(`<tr><td>${i===0?(dt?`<b>${esc(shortDate(dt))}</b>`:'<span class="badge yellow">未設定</span>'):""}</td><td>${esc(g.mat)}</td><td>${g.t===null?"板厚未設定":esc(g.t)+"mm"}</td><td>${fmt(Math.round(g.m*100)/100)}m/${fmt(g.qty)}個</td><td>${sp?esc(sp):'<span class="badge red">未設定</span>'}</td><td>${min===null?"－":fmtMinutes(min)}</td></tr>`)});
-  grand+=sum;rowsHtml.push(`<tr style="background:#f1f5f9"><td></td><td colspan="2"><b>${dt?esc(shortDate(dt)):"未設定"} 合計</b></td><td><b>${fmt(Math.round(mSum*100)/100)}m/${fmt(qtySum)}個</b></td><td></td><td>${fmtMinutes(sum)}</td></tr>`)});
- rowsHtml.push(`<tr style="background:#e0ecff"><td colspan="5"><b>全体の切断時間 合計</b></td><td>${fmtMinutes(grand)}</td></tr>`);
- el.innerHTML=table(["予定日","材質","板厚","切断長/個数","速度","切断時間"],rowsHtml)+(noSpeed?`<p class="help" style="color:#b91c1c">切断速度が未設定の板厚が ${noSpeed}行あります（時間には含みません）。下の「切断速度の設定」に板厚を追加してください。</p>`:"")+(noLen?`<p class="help">切断長が未入力の部品が ${noLen}件あります（時間には含みません）。</p>`:"")}
+ const rowsHtml=[];let grand=0,grandW=0,noSpeed=0;
+ dkeys.forEach(dt=>{const groups=Object.values(days[dt]).sort((a,b)=>a.mat.localeCompare(b.mat,"ja")||(a.t??1e9)-(b.t??1e9));let sum=0,qtySum=0,mSum=0,wSum=0;
+  groups.forEach((g,i)=>{const sp=cutSpeedFor(g.t);const min=sp?g.m/sp:null;if(min!==null)sum+=min;else noSpeed++;qtySum+=g.qty;mSum+=g.m;wSum+=g.w;
+   rowsHtml.push(`<tr><td>${i===0?(dt?`<b>${esc(shortDate(dt))}</b>`:'<span class="badge yellow">未設定</span>'):""}</td><td>${esc(g.mat)}</td><td>${g.t===null?"板厚未設定":esc(g.t)+"mm"}</td><td>${fmt(Math.round(g.m*100)/100)}m/${fmt(g.qty)}個</td><td>${fmt(Math.round(g.w*10)/10)} kg</td><td>${sp?esc(sp):'<span class="badge red">未設定</span>'}</td><td>${min===null?"－":fmtMinutes(min)}</td></tr>`)});
+  grand+=sum;grandW+=wSum;rowsHtml.push(`<tr style="background:#f1f5f9"><td></td><td colspan="2"><b>${dt?esc(shortDate(dt)):"未設定"} 合計</b></td><td><b>${fmt(Math.round(mSum*100)/100)}m/${fmt(qtySum)}個</b></td><td><b>${fmt(Math.round(wSum*10)/10)} kg</b></td><td></td><td>${fmtMinutes(sum)}</td></tr>`)});
+ rowsHtml.push(`<tr style="background:#e0ecff"><td colspan="4"><b>全体の合計</b></td><td><b>${fmt(Math.round(grandW*10)/10)} kg</b></td><td></td><td>${fmtMinutes(grand)}</td></tr>`);
+ el.innerHTML=table(["予定日","材質","板厚","切断長/個数","重量","速度","切断時間"],rowsHtml)+(noSpeed?`<p class="help" style="color:#b91c1c">切断速度が未設定の板厚が ${noSpeed}行あります（時間には含みません）。下の「切断速度の設定」に板厚を追加してください。</p>`:"")+(noLen?`<p class="help">切断長が未入力の部品が ${noLen}件あります（時間には含みません）。</p>`:"")}
 function renderPlan(){
  const start=$("planStart").value,end=$("planEnd").value;
  const inRange=activeLists().filter(l=>overlapsDue(l,start,end));
@@ -1209,7 +1209,7 @@ function parseDim(v){const n=parseFloat(String(v??"").normalize("NFKC").replace(
 function fmtDim(n){return String(Number(n.toFixed(3)))}
 function maxSizePairOf(l){let best=null;(l.rows||[]).forEach(r=>{const w=parseDim(r.width),h=parseDim(r.height);if(w==null&&h==null)return;const rMax=Math.max(w||0,h||0),rMin=Math.min(w||0,h||0);if(!best||rMax>best.max||(rMax===best.max&&rMin>best.min))best={max:rMax,min:rMin,w,h}});if(!best)return null;return best.w!=null&&best.h!=null?`${fmtDim(best.w)}×${fmtDim(best.h)}`:`${fmtDim(best.w!=null?best.w:best.h)}`}
 function maxSizeOf(l){return maxSizePairOf(l)}
-function maxSizeLabel(l){const m=maxSizeOf(l);return m==null?"－":`最大サイズ ${m}mm`}
+function maxSizeLabel(l){const m=maxSizeOf(l);return m==null?"－":`最大サイズ ${m}`}
 function persistDelivery(){
   localStorage.setItem(DELIVERY_BOARD_KEY,JSON.stringify(deliveryBoard));
   localStorage.setItem(EVENT_KEY,JSON.stringify(deliveryEvents));
@@ -1220,8 +1220,43 @@ function persistDelivery(){
 }
 function refreshEventSelect(){const el=$("eventJobSelect");if(!el)return;el.innerHTML='<option value="">工事を選択（任意）</option>'+lists.map(l=>`<option value="${esc(l.serial)}">${esc(l.serial)} / ${esc(l.job)} / ${esc(dueLabel(l))}</option>`).join("")}
 function addDeliveryEvent(){const serialRef="",date=$("eventDate").value,type="",customer=$("eventCustomer").value.trim(),job=$("eventJob").value.trim(),slip=$("eventSlip").value.trim(),sales=$("eventSales").value.trim(),destination=$("eventDestination").value.trim(),note=$("eventNote").value.trim();if(!date||!destination){$("eventMsg").textContent="日付と訪問先を入力してください。";return}const eventRegKey="factory_link_event_seq_v1";let reg={next:1,issued:[],retired:[]};try{reg={...reg,...JSON.parse(localStorage.getItem(eventRegKey)||"{}")} }catch(e){}reg.issued=Array.isArray(reg.issued)?reg.issued.map(String):[];reg.retired=Array.isArray(reg.retired)?reg.retired.map(String):[];let eventId;do{eventId=String(reg.next++).padStart(8,"0");if(eventId.length>8)throw new Error("配送イベント番号の採番上限に達しました")}while(reg.issued.includes(eventId)||reg.retired.includes(eventId)||deliveryEvents.some(x=>String(x.id)===eventId));reg.issued.push(eventId);localStorage.setItem(eventRegKey,JSON.stringify(reg));deliveryEvents.push({id:eventId,serial:serialRef,date,type,customer,job,destination,note,createdAt:new Date().toISOString()});if(slip||sales)deliveryMeta["E:"+eventId]={slip,sales};persistDelivery();["eventCustomer","eventJob","eventDestination","eventSlip","eventSales","eventNote"].forEach(id=>$(id).value="");$("eventMsg").textContent="配送イベントを登録しました。";renderDeliveryBoard()}
-/* 配達表の並び：納期（日付）の早い順 → 同じ納期の中で同じ納入先を連続させる。メモ行は今の行位置に残し、それ以外を並び替えて空いた位置に入れる */
-function deliveryAutoSort(board,byKey){const items=board.filter(x=>x.memo===undefined&&byKey.has(x.key));const dk=x=>String(x.date||"9999-99-99"),dest=x=>String(x.destination||"").trim();items.sort((a,b)=>{const A=byKey.get(a.key),B=byKey.get(b.key);return dk(A).localeCompare(dk(B))||dest(A).localeCompare(dest(B),"ja")||(A.type===B.type?0:A.type==="list"?-1:1)||String(A.serial||A.key).localeCompare(String(B.serial||B.key))});let k=0;return board.map(x=>x.memo===undefined&&byKey.has(x.key)?items[k++]:x)}
+function kanjiNumToDigits(s){
+ const map={"〇":0,"零":0,"一":1,"二":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9};
+ if(/^[〇零一二三四五六七八九]+$/.test(s)&&!/十|百/.test(s)){
+  if(s.length===1)return String(map[s]);
+  return [...s].map(c=>map[c]).join("");
+ }
+ let total=0,cur=0;
+ for(const ch of s){
+  if(ch in map){cur=map[ch]}
+  else if(ch==="十"){total+=(cur||1)*10;cur=0}
+  else if(ch==="百"){total+=(cur||1)*100;cur=0}
+ }
+ return String(total+cur);
+}
+function normKanjiNums(s){
+ return s
+  .replace(/第([〇零一二三四五六七八九十百]+)/g,(_,k)=>"第"+kanjiNumToDigits(k))
+  .replace(/([〇零一二三四五六七八九十百]+)(?=(?:工場|棟|号|番地|番|丁目|階|倉庫|ヤード|ブロック|ゲート|門|F))/gi,(_,k)=>kanjiNumToDigits(k));
+}
+function normalizeDestParts(raw){
+ const full=String(raw||"").normalize("NFKC").trim()
+  .replace(/[\u2010-\u2015\u2212]/g,"-")
+  .replace(/\(\s*株\s*\)/g,"株式会社")
+  .replace(/\(\s*有\s*\)/g,"有限会社")
+  .replace(/\(\s*同\s*\)/g,"合同会社")
+  .replace(/\(\s*資\s*\)/g,"合資会社")
+  .replace(/\(\s*名\s*\)/g,"合名会社");
+ const subs=[];
+ const stripped=full.replace(/[(\[【「〔]([^)\]】」〕]*)[)\]】」〕]/g,(_,inner)=>{
+  if(inner&&inner.trim())subs.push(normKanjiNums(inner.trim()));
+  return "";
+ }).trim();
+ const normStr=v=>normKanjiNums(v).replace(/\s+/g," ").replace(/([^\x00-\x7F])\s+|\s+([^\x00-\x7F])/g,"$1$2").replace(/[・]/g,"").toLowerCase();
+ return {base:normStr(stripped||full),sub:normStr(subs.join(" "))};
+}
+/* 配達表の並び：納期（日付）の早い順 → 同じ納期の中で同じ納入先（全角半角・漢数字・カッコ内工場名の表記ゆれを吸収）を連続させる。メモ行は今の行位置に残し、それ以外を並び替えて空いた位置に入れる */
+function deliveryAutoSort(board,byKey){const items=board.filter(x=>x.memo===undefined&&byKey.has(x.key));const dk=x=>String(x.date||"9999-99-99");items.sort((a,b)=>{const A=byKey.get(a.key),B=byKey.get(b.key),da=normalizeDestParts(A.destination),db=normalizeDestParts(B.destination);return dk(A).localeCompare(dk(B))||da.base.localeCompare(db.base,"ja",{numeric:true})||(A.type===B.type?0:A.type==="list"?-1:1)||da.sub.localeCompare(db.sub,"ja",{numeric:true})||String(A.serial||A.key).localeCompare(String(B.serial||B.key))});let k=0;return board.map(x=>x.memo===undefined&&byKey.has(x.key)?items[k++]:x)}
 function deliveryEntries(){let base=activeLists().map(l=>({key:"L:"+l.serial,type:"list",serial:l.serial,date:dueStart(l),customer:l.customer||"",job:l.job||"",destination:l.destination||"",dateLabel:dueLabel(l),cut:cutLabel(l),qty:total(l,"qty"),procPrint:printProcessList(l),procText:printProcessText(l),mfg:mfgBadge(l,true)+processStatusChips(l,true),weight:total(l,"weight"),maxSize:maxSizeLabel(l),slip:(deliveryMeta["L:"+l.serial]||{}).slip||"",sales:(deliveryMeta["L:"+l.serial]||{}).sales||"",note:l.deliveryNote!==undefined?l.deliveryNote:longSizeNote(l),method:l.deliveryMethod||""})).concat(deliveryEvents.map(e=>({key:"E:"+e.id,type:"event",event:e,serial:e.serial,date:e.date,dateLabel:shortDate(e.date)||"－",customer:e.customer||"",job:e.job||e.type||(lists.find(l=>l.serial===e.serial)?.job||""),destination:e.destination,cut:"－",qty:"",weight:"",maxSize:"－",slip:(deliveryMeta["E:"+e.id]||{}).slip||"",sales:(deliveryMeta["E:"+e.id]||{}).sales||"",note:e.note||"",method:e.type})));let byKey=new Map(base.map(x=>[x.key,x]));let known=new Set(deliveryBoard.filter(x=>x.key).map(x=>x.key));base.filter(x=>!known.has(x.key)).sort((a,b)=>String(a.date||"9999").localeCompare(String(b.date||"9999"))).forEach(x=>deliveryBoard.push({key:x.key}));deliveryBoard=deliveryBoard.filter(x=>x.memo!==undefined||byKey.has(x.key));deliveryBoard=deliveryAutoSort(deliveryBoard,byKey);return deliveryBoard.map(x=>x.memo!==undefined?x:byKey.get(x.key))}
 function moveDelivery(index,delta){let j=index+delta;if(j<0||j>=deliveryBoard.length)return;[deliveryBoard[index],deliveryBoard[j]]=[deliveryBoard[j],deliveryBoard[index]];persistDelivery();renderDeliveryBoard()}
 function addDeliveryMemo(){let text=prompt("配達表に挿入するメモを入力してください");if(text===null)return;let pos=prompt(`挿入位置を入力してください（1〜${deliveryBoard.length+1}、空欄なら最後）`,String(deliveryBoard.length+1));if(pos===null)return;let index=pos.trim()===""?deliveryBoard.length:Math.max(0,Math.min(deliveryBoard.length,Number(pos)-1));deliveryBoard.splice(index,0,{key:"M:"+Date.now()+Math.floor(Math.random()*1000),memo:text});persistDelivery();renderDeliveryBoard()}
@@ -1229,9 +1264,9 @@ function deleteDeliveryMemo(key){if(!confirm("このメモを削除しますか�
 function updateDeliveryMemo(key,value){let x=deliveryBoard.find(x=>x.key===key);if(x){x.memo=value;persistDelivery()}}
 function editDeliveryField(key,field,value){let prefix=key.slice(0,2),id=key.slice(2);if(field==="slip"||field==="sales"){deliveryMeta[key]=deliveryMeta[key]||{};deliveryMeta[key][field]=value;persistDelivery();renderDeliveryBoard();return}if(prefix==="L:"){let l=lists.find(x=>x.serial===id);if(!l)return;if(field==="note"){l.deliveryNote=value;save()}return}else if(prefix==="E:"){let e=deliveryEvents.find(x=>x.id===id);if(!e)return;if(field==="destination")e.destination=value;if(field==="note")e.note=value;if(field==="date")e.date=value;if(field==="job")e.job=value;if(field==="customer")e.customer=value;}persistDelivery();renderDeliveryBoard()}
 function cutShortLabel(cut){const s=String(cut||"").trim();if(!s||s==="未指定"||s==="－")return"－";const m={"ガス":"ガ","プラズマ":"プ","レーザー":"レ","シャーリング":"シ","外注":"外"};return m[s]||s.slice(0,1)}
-function deliveryGroupKey(x){if(!x||x.memo!==undefined||x.type!=="list")return"";const d=String(x.date||"").trim(),dest=String(x.destination||"").normalize("NFKC").replace(/\s+/g," ").trim();return(!d||!dest)?"":d+"\u0001"+dest}
+function deliveryGroupKey(x){if(!x||x.memo!==undefined||x.type!=="list")return"";const d=String(x.date||"").trim(),{base,sub}=normalizeDestParts(x.destination);return(!d||!base)?"":d+"\u0001"+base+"\u0001"+sub}
 function deliveryGroupRuns(entries){const startMap=new Map(),skipSet=new Set(),rowMeta=new Map();let i=0;while(i<entries.length){const k=deliveryGroupKey(entries[i]);if(!k){i++;continue}let j=i+1,sumW=num(entries[i].weight);while(j<entries.length&&deliveryGroupKey(entries[j])===k){sumW+=num(entries[j].weight);j++}const len=j-i;if(len>=2){const grp={len,sumW:Math.round(sumW*10)/10,startIdx:i,endIdx:j-1};startMap.set(i,grp);for(let p=i;p<j;p++){rowMeta.set(p,{...grp,isTop:p===i,isBot:p===j-1});if(p>i)skipSet.add(p)}}i=j}return{startMap,skipSet,rowMeta}}
-function renderDeliveryBoard(){refreshEventSelect();let entries=deliveryEntries();const {startMap,skipSet,rowMeta}=deliveryGroupRuns(entries);const mvb=i=>`<span class="dl-moves"><button class="btn small secondary" onclick="moveDelivery(${i},-1)">↑</button><button class="btn small secondary" onclick="moveDelivery(${i},1)">↓</button></span>`;let dlNo=0;let html=entries.map((x,i)=>{if(x.memo!==undefined)return `<tr class="memo-row" draggable="true" ondragstart="deliveryDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${i})"><td class="dl-mv">${mvb(i)}</td><td colspan="14"><div class="memo-flex"><b>メモ</b><input value="${esc(x.memo)}" onchange="updateDeliveryMemo('${x.key}',this.value)"><button class="btn small secondary" style="color:#b91c1c" onclick="deleteDeliveryMemo('${x.key}')">削除</button></div></td></tr>`;let k=x.key;const isList=x.type==="list";const tt=v=>`title="${esc(v||"")}"`;const maxs=String(x.maxSize||"－").replace(/^最大サイズ\s*/,"");const cutInit=isList?cutShortLabel(x.cut):"－";const grp=startMap.get(i),rm=rowMeta.get(i);const tbCls=rm?`${rm.isTop?" grp-top":""}${rm.isBot?" grp-bot":""}`:"";const destCls=rm?` grp-left${tbCls}`:"";const gwtCell=skipSet.has(i)?"":(grp?`<td class="dl-gwt grp-gwt" rowspan="${grp.len}">${fmt(grp.sumW)} kg</td>`:`<td class="dl-gwt"></td>`);return `<tr class="drag-row" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${i})"><td class="dl-mv dl-no">${++dlNo}</td><td class="dl-date">${esc(x.dateLabel||x.date||"")}${isList?"":`<input type="date" class="dl-datepick" value="${esc(x.date||"")}" title="日付を変更" onclick="try{this.showPicker()}catch(e){}" onchange="editDeliveryField('${k}','date',this.value)">`}</td><td class="dl-serial">${isList?`<span class="badge">${esc(x.serial)}</span>`:`<span class="badge blue" title="配送イベント">${esc(x.event.id)}</span>${x.event.serial?` <span class="help">工程番号 ${esc(x.event.serial)}</span>`:""}`}</td><td class="dl-cust" ${isList?tt(x.customer):""}>${isList?esc(x.customer):`<input value="${esc(x.customer)}" onchange="editDeliveryField('${k}','customer',this.value)">`}</td><td class="dl-job" ${isList?tt(x.job):""}>${isList?esc(x.job):`<input value="${esc(x.job)}" onchange="editDeliveryField('${k}','job',this.value)">`}</td><td class="dl-dest${destCls}" ${isList?tt(x.destination):""}>${isList?esc(x.destination):`<input value="${esc(x.destination)}" onchange="editDeliveryField('${k}','destination',this.value)">`}</td><td class="dl-qty${tbCls}">${isList?fmt(x.qty)+" 枚":"－"}</td><td class="dl-wt${tbCls}">${isList?fmt(x.weight)+" kg":"－"}</td>${gwtCell}<td class="dl-max">${esc(maxs)}</td><td class="dl-slip"><input value="${esc(x.slip)}" placeholder="登録番号" onchange="editDeliveryField('${k}','slip',this.value)"></td><td class="dl-sales"><input value="${esc(x.sales)}" placeholder="伝票番号" onchange="editDeliveryField('${k}','sales',this.value)"></td><td class="dl-note"><input value="${esc(x.note)}" placeholder="備考" onchange="editDeliveryField('${k}','note',this.value)"></td><td class="dl-cut" ${isList?tt(x.cut):""}>${esc(cutInit)}</td><td class="dl-mfg">${isList?`<span class="cut-inline">${esc(cutInit)}</span>`+(x.mfg||"－"):"－"}</td></tr>`}).join("");$("deliveryBoardTable").innerHTML=html?`<table class="dl-table"><thead><tr><th>No.</th><th>納期</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先</th><th>枚数</th><th>角重量</th><th>合計重量</th><th>最大サイズ</th><th>登録番号</th><th>伝票番号</th><th>備考</th><th>切断</th><th>製造状況</th></tr></thead><tbody>${html}</tbody></table>`:'<div class="empty">配送データがありません</div>'}
+function renderDeliveryBoard(){refreshEventSelect();let entries=deliveryEntries();const {startMap,skipSet,rowMeta}=deliveryGroupRuns(entries);const mvb=i=>`<span class="dl-moves"><button class="btn small secondary" onclick="moveDelivery(${i},-1)">↑</button><button class="btn small secondary" onclick="moveDelivery(${i},1)">↓</button></span>`;let dlNo=0;let html=entries.map((x,i)=>{if(x.memo!==undefined)return `<tr class="memo-row" draggable="true" ondragstart="deliveryDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${i})"><td class="dl-mv">${mvb(i)}</td><td colspan="14"><div class="memo-flex"><b>メモ</b><input value="${esc(x.memo)}" onchange="updateDeliveryMemo('${x.key}',this.value)"><button class="btn small secondary" style="color:#b91c1c" onclick="deleteDeliveryMemo('${x.key}')">削除</button></div></td></tr>`;let k=x.key;const isList=x.type==="list";const tt=v=>`title="${esc(v||"")}"`;const maxs=String(x.maxSize||"－").replace(/^最大サイズ\s*/,"").replace(/\s*mm$/i,"");const cutInit=isList?cutShortLabel(x.cut):"－";const grp=startMap.get(i),rm=rowMeta.get(i);const tbCls=rm?`${rm.isTop?" grp-top":""}${rm.isBot?" grp-bot":""}`:"";const destCls=rm?` grp-left${tbCls}`:"";const gwtCell=skipSet.has(i)?"":(grp?`<td class="dl-gwt grp-gwt" rowspan="${grp.len}">${fmt(grp.sumW)} kg</td>`:`<td class="dl-gwt"></td>`);return `<tr class="drag-row" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${i})"><td class="dl-mv dl-no">${++dlNo}</td><td class="dl-date">${esc(x.dateLabel||x.date||"")}${isList?"":`<input type="date" class="dl-datepick" value="${esc(x.date||"")}" title="日付を変更" onclick="try{this.showPicker()}catch(e){}" onchange="editDeliveryField('${k}','date',this.value)">`}</td><td class="dl-serial">${isList?`<span class="badge">${esc(x.serial)}</span>`:`<span class="badge blue" title="配送イベント">${esc(x.event.id)}</span>${x.event.serial?` <span class="help">工程番号 ${esc(x.event.serial)}</span>`:""}`}</td><td class="dl-cust" ${isList?tt(x.customer):""}>${isList?esc(x.customer):`<input value="${esc(x.customer)}" onchange="editDeliveryField('${k}','customer',this.value)">`}</td><td class="dl-job" ${isList?tt(x.job):""}>${isList?esc(x.job):`<input value="${esc(x.job)}" onchange="editDeliveryField('${k}','job',this.value)">`}</td><td class="dl-dest${destCls}" ${isList?tt(x.destination):""}>${isList?esc(x.destination):`<input value="${esc(x.destination)}" onchange="editDeliveryField('${k}','destination',this.value)">`}</td><td class="dl-qty${tbCls}">${isList?fmt(x.qty)+" 枚":"－"}</td><td class="dl-wt${tbCls}">${isList?fmt(x.weight)+" kg":"－"}</td>${gwtCell}<td class="dl-max">${esc(maxs)}</td><td class="dl-slip"><input value="${esc(x.slip)}" placeholder="登録番号" onchange="editDeliveryField('${k}','slip',this.value)"></td><td class="dl-sales"><input value="${esc(x.sales)}" placeholder="伝票番号" onchange="editDeliveryField('${k}','sales',this.value)"></td><td class="dl-note"><input value="${esc(x.note)}" placeholder="備考" onchange="editDeliveryField('${k}','note',this.value)"></td><td class="dl-cut" ${isList?tt(x.cut):""}>${esc(cutInit)}</td><td class="dl-mfg">${isList?`<span class="cut-inline">${esc(cutInit)}</span>`+(x.mfg||"－"):"－"}</td></tr>`}).join("");$("deliveryBoardTable").innerHTML=html?`<table class="dl-table"><thead><tr><th>No.</th><th>納期</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先</th><th>枚数</th><th>角重量</th><th>合計重量</th><th>最大サイズ</th><th>登録番号</th><th>伝票番号</th><th>備考</th><th>切断</th><th>製造状況</th></tr></thead><tbody>${html}</tbody></table>`:'<div class="empty">配送データがありません</div>'}
 let draggedDeliveryIndex=null;function deliveryDragStart(e,index){draggedDeliveryIndex=index;e.dataTransfer.effectAllowed="move"}function deliveryDrop(e,index){e.preventDefault();if(draggedDeliveryIndex===null||draggedDeliveryIndex===index)return;const [item]=deliveryBoard.splice(draggedDeliveryIndex,1);deliveryBoard.splice(index,0,item);draggedDeliveryIndex=null;persistDelivery();renderDeliveryBoard()}
 window.moveDelivery=moveDelivery;window.updateDeliveryMemo=updateDeliveryMemo;window.editDeliveryField=editDeliveryField;window.deliveryDragStart=deliveryDragStart;window.deliveryDrop=deliveryDrop;
 $("addEventBtn").onclick=addDeliveryEvent;$("addDeliveryMemoBtn").onclick=addDeliveryMemo;
@@ -1264,7 +1299,7 @@ function printDelivery(){
  const bodyRows=entries.map((x,i)=>{
   if(x.memo!==undefined)return `<tr class="memo-print"><td colspan="14" style="background:#fef9c3!important;font-weight:700">${esc(x.memo)}</td></tr>`;
   const isList=x.type==="list";
-  const maxs=isList?String(x.maxSize||"－").replace(/^最大サイズ\s*/,""):"";
+  const maxs=isList?String(x.maxSize||"－").replace(/^最大サイズ\s*/,"").replace(/\s*mm$/i,""):"";
   if(isList){sumQty+=num(x.qty);sumW+=Math.round(num(x.weight)*10)/10;listRowCount++;}
   const grp=startMap.get(i),rm=rowMeta.get(i);
   const tbCls=rm?`${rm.isTop?" grp-top":""}${rm.isBot?" grp-bot":""}`:"";
@@ -1321,7 +1356,7 @@ function exportDeliveryExcel(){
     return;
    }
    const isList=x.type==="list";
-   const maxs=isList?String(x.maxSize||"－").replace(/^最大サイズ\s*/,""):"";
+   const maxs=isList?String(x.maxSize||"－").replace(/^最大サイズ\s*/,"").replace(/\s*mm$/i,""):"";
    const qtyVal=isList?num(x.qty):null;
    const wVal=isList?Math.round(num(x.weight)*10)/10:null;
    if(isList){sumQty+=qtyVal;sumW+=wVal;dataRows.push(curRow);}
