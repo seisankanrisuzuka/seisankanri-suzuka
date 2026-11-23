@@ -453,8 +453,8 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261123b"></script>
-  <script src="sync.js?v=20261123b"></script>
+  <script src="firebase-config.js?v=20261123c"></script>
+  <script src="sync.js?v=20261123c"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -660,6 +660,7 @@ body.on-stage .arch-toggle span{display:none}
 </main>
 <script>
 const PROCESSES=["切断","バンドソー","キリ","ショット","開先","曲げ"];
+const IS_FS_MODE=!!(window.APP_CONFIG&&window.APP_CONFIG.mode==="firestore");
 const KEY="factory_link_prototype_v1";
 const SERIAL_KEY="factory_link_serial_registry_v2", STAGE_ORDER_KEY="factory_link_stage_board_v2", DELIVERY_BOARD_KEY="factory_link_delivery_board_v2", EVENT_KEY="factory_link_delivery_events_v2";
 let lists=loadData();
@@ -687,11 +688,11 @@ function normalizeListData(l){
 lists.forEach(normalizeListData);lists.forEach(ensureOutsourcedPile);
 let currentCsvRows=[];
 const $=id=>document.getElementById(id);
-function loadData(){try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(e){return []}}
+function loadData(){if(IS_FS_MODE)return [];try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(e){return []}}
 function updateArchCount(){const n=lists.filter(isArchived).length;const el=document.getElementById("archCount");if(el)el.textContent=n?(showArchived?`完了済みのリスト ${n}件を表示中です。`:`現在、完了済みのリスト ${n}件を非表示にしています。`):"現在、非表示にしているリストはありません。"}
 function save(){
   lists.forEach(ensureOutsourcedPile);
-  localStorage.setItem(KEY,JSON.stringify(lists));
+  if(!IS_FS_MODE)localStorage.setItem(KEY,JSON.stringify(lists));
   renderAll();
   try{updateExportCsvCount();updatePurgeCount()}catch(e){}
   if(window.Sync&&window.Sync.on&&window.Sync.pushLists){
@@ -852,9 +853,9 @@ function renderDeliveryPrint(){const entries=deliveryEntries();$("deliveryPrintT
 const CUT_SPEED_KEY="factory_link_cut_speeds_v1";
 const CUT_SPEED_DEFAULT=[[1.6,2.1],[2.3,1.2],[3.2,1.05],[4.5,4],[6,3.9],[9,2.5],[12,2.0],[16,3.0],[19,2.05],[22,1.8],[25,1.65],[28,1.4],[32,1.1],[36,0.89]];
 const cloneDefaultSpeeds=()=>CUT_SPEED_DEFAULT.map(([t,v])=>({t,v}));
-let cutSpeeds=cloneDefaultSpeeds();try{const saved=JSON.parse(localStorage.getItem(CUT_SPEED_KEY)||"null");if(Array.isArray(saved)&&saved.length)cutSpeeds=saved.map(x=>({t:x.t,v:x.v}))}catch(e){}
+let cutSpeeds=cloneDefaultSpeeds();if(!IS_FS_MODE){try{const saved=JSON.parse(localStorage.getItem(CUT_SPEED_KEY)||"null");if(Array.isArray(saved)&&saved.length)cutSpeeds=saved.map(x=>({t:x.t,v:x.v}))}catch(e){}}
 function persistCutSpeeds(){
-  try{localStorage.setItem(CUT_SPEED_KEY,JSON.stringify(cutSpeeds))}catch(e){}
+  if(!IS_FS_MODE){try{localStorage.setItem(CUT_SPEED_KEY,JSON.stringify(cutSpeeds))}catch(e){}}
   if(window.Sync&&window.Sync.on&&window.Sync.pushSettings){
     window.Sync.pushSettings();
   }
@@ -901,7 +902,7 @@ function renderPlan(){
 }
 
 const STAGE_PAGES={"切断":"stage-cut-table","バンドソー":"stage-bandsaw-table","キリ":"stage-kiri-table","ショット":"stage-shot-table","開先":"stage-bevel-table","曲げ":"stage-bend-table"};
-let stageBoard={};try{stageBoard=JSON.parse(localStorage.getItem(STAGE_ORDER_KEY)||"{}")}catch(e){}
+let stageBoard={};if(!IS_FS_MODE){try{stageBoard=JSON.parse(localStorage.getItem(STAGE_ORDER_KEY)||"{}")}catch(e){}}
 /* 各工程タブの並び：作業日（工程管理で入力）の早い順 → 同じ作業日の中で「工事名＋納入先」が同じものを連続させる。
    メモ行は今の行位置に残し、リスト行だけを並び替えて空いている位置に入れる */
 function stageAutoSort(process,board){const lm=new Map(lists.map(l=>[String(l.serial),l]));const wd=l=>l.processDates?.[process]||"9999-99-99";const gk=l=>`${String(l.job||"").trim()}\u0001${String(l.destination||"").trim()}`;const ds=l=>String(dueStart(l)||"9999");const first={};board.forEach(x=>{if(x.type!=="list")return;const l=lm.get(String(x.serial));if(!l)return;const k=wd(l)+"|"+gk(l);if(!(k in first)||ds(l)<first[k])first[k]=ds(l)});const items=board.filter(x=>x.type==="list"&&lm.get(String(x.serial)));items.sort((a,b)=>{const A=lm.get(String(a.serial)),B=lm.get(String(b.serial));return wd(A).localeCompare(wd(B))||String(first[wd(A)+"|"+gk(A)]).localeCompare(String(first[wd(B)+"|"+gk(B)]))||gk(A).localeCompare(gk(B),"ja")||ds(A).localeCompare(ds(B))||String(A.serial).localeCompare(String(B.serial))});let k=0;return board.map(x=>x.type==="list"&&lm.get(String(x.serial))?items[k++]:x)}
@@ -923,7 +924,7 @@ function stageCutGroups(){const set=new Set();activeLists().filter(l=>(l.process
 /* 以前の「切断」全体のメモを、最初の切断方法の表へ引き継ぐ */
 function migrateCutMemos(groups){const legacy=(stageBoard["切断"]||[]).filter(x=>x&&x.type==="memo");if(!legacy.length){if(stageBoard["切断"]){delete stageBoard["切断"];persistStageBoard()}return}const g=groups[0]||"未指定";const k=`切断|${g}`;stageBoard[k]=(stageBoard[k]||[]).concat(legacy);delete stageBoard["切断"];persistStageBoard()}
 function persistStageBoard(){
-  localStorage.setItem(STAGE_ORDER_KEY,JSON.stringify(stageBoard));
+  if(!IS_FS_MODE)localStorage.setItem(STAGE_ORDER_KEY,JSON.stringify(stageBoard));
   if(window.Sync&&window.Sync.on&&window.Sync.pushStage){
     window.Sync.pushStage();
   }
@@ -1253,19 +1254,21 @@ window.deliverList=s=>{let l=lists.find(x=>x.serial===s);if(!l)return;if((l.pile
 // 配送完了の操作は積み込み画面から除外。過去データ互換のため記録項目は保持。
 $("loadSearchBtn").onclick=renderLoad;["loadDueStart","loadDueEnd","loadDestSearch","loadJobSearch"].forEach(id=>$(id).addEventListener("input",renderLoad));$("loadMethodSearch").addEventListener("change",renderLoad);$("loadClearBtn").onclick=()=>{["loadDueStart","loadDueEnd","loadDestSearch","loadJobSearch","loadMethodSearch"].forEach(id=>$(id).value="");renderLoad()};
 // 配達表専用の順序・メモ・編集データ
-let deliveryBoard=[];try{deliveryBoard=JSON.parse(localStorage.getItem(DELIVERY_BOARD_KEY)||"[]")}catch(e){}
-let deliveryEvents=[];try{deliveryEvents=JSON.parse(localStorage.getItem(EVENT_KEY)||"[]")}catch(e){}
+let deliveryBoard=[];if(!IS_FS_MODE){try{deliveryBoard=JSON.parse(localStorage.getItem(DELIVERY_BOARD_KEY)||"[]")}catch(e){}}
+let deliveryEvents=[];if(!IS_FS_MODE){try{deliveryEvents=JSON.parse(localStorage.getItem(EVENT_KEY)||"[]")}catch(e){}}
 // 登録番号・伝票番号は配達表専用データ（元のリストには持たせない）。キー："L:工程番号" / "E:イベントID"
-const DELIVERY_META_KEY="factory_link_delivery_meta_v1";let deliveryMeta={};try{deliveryMeta=JSON.parse(localStorage.getItem(DELIVERY_META_KEY)||"{}")||{}}catch(e){deliveryMeta={}}
+const DELIVERY_META_KEY="factory_link_delivery_meta_v1";let deliveryMeta={};if(!IS_FS_MODE){try{deliveryMeta=JSON.parse(localStorage.getItem(DELIVERY_META_KEY)||"{}")||{}}catch(e){deliveryMeta={}}}
 function parseDim(v){const n=parseFloat(String(v??"").normalize("NFKC").replace(/,/g,""));return Number.isFinite(n)&&n>0?n:null}
 function fmtDim(n){return String(Number(n.toFixed(3)))}
 function maxSizePairOf(l){let best=null;(l.rows||[]).forEach(r=>{const w=parseDim(r.width),h=parseDim(r.height);if(w==null&&h==null)return;const rMax=Math.max(w||0,h||0),rMin=Math.min(w||0,h||0);if(!best||rMax>best.max||(rMax===best.max&&rMin>best.min))best={max:rMax,min:rMin,w,h}});if(!best)return null;return best.w!=null&&best.h!=null?`${fmtDim(best.w)}×${fmtDim(best.h)}`:`${fmtDim(best.w!=null?best.w:best.h)}`}
 function maxSizeOf(l){return maxSizePairOf(l)}
 function maxSizeLabel(l){const m=maxSizeOf(l);return m==null?"－":`最大サイズ ${m}`}
 function persistDelivery(){
-  localStorage.setItem(DELIVERY_BOARD_KEY,JSON.stringify(deliveryBoard));
-  localStorage.setItem(EVENT_KEY,JSON.stringify(deliveryEvents));
-  localStorage.setItem(DELIVERY_META_KEY,JSON.stringify(deliveryMeta));
+  if(!IS_FS_MODE){
+    localStorage.setItem(DELIVERY_BOARD_KEY,JSON.stringify(deliveryBoard));
+    localStorage.setItem(EVENT_KEY,JSON.stringify(deliveryEvents));
+    localStorage.setItem(DELIVERY_META_KEY,JSON.stringify(deliveryMeta));
+  }
   if(window.Sync&&window.Sync.on&&window.Sync.pushDelivery){
     window.Sync.pushDelivery();
   }
@@ -1582,18 +1585,20 @@ $("exportBtn").onclick=async()=>{
   }
   downloadBackup("factory-link-backup.json");$("backupMsg").textContent="バックアップファイルを書き出しました。";
 };
-async function importBackupText(text){const msg=$("backupMsg");try{text=String(text).replace(/^\uFEFF/,"").trim();if(!text)throw new Error("内容が空です");let data=JSON.parse(text);let extra=null;if(data&&!Array.isArray(data)&&Array.isArray(data.lists)){extra=data;data=data.lists}if(!Array.isArray(data))throw new Error("バックアップ形式ではありません（工事リストの配列が見つかりません）");if(confirm(`現在のデータをバックアップ内容（${data.length}件）で置き換えますか？`)){
+async function importBackupText(text){const msg=$("backupMsg");try{text=String(text).replace(/^\uFEFF/,"").trim();if(!text)throw new Error("内容が空です");let data=JSON.parse(text);let extra=null;if(data&&!Array.isArray(data)&&Array.isArray(data.lists)){extra=data;data=data.lists}if(!Array.isArray(data))throw new Error("バックアップ形式ではありません（工事リストの配列が見つかりません）");
     if(window.Sync&&window.Sync.on&&window.Sync.restore&&window.Sync.isAdmin&&window.Sync.isAdmin()){
       try{
-        msg.textContent="クラウド（Firestore）へ復元中...";
+        msg.textContent="復元内容を確認中...";
         const n=await window.Sync.restore(extra||{lists:data});
+        if(n===null){msg.textContent="読み込みをキャンセルしました。";return;}
         msg.textContent=`クラウドへの復元が完了しました（${n}件）。`;
         return;
       }catch(err){
         msg.textContent="クラウドへの復元に失敗しました："+(err&&err.message||err);
         return;
       }
-    }data.forEach(normalizeListData);lists=data;if(extra){if(Array.isArray(extra.deliveryBoard))deliveryBoard=extra.deliveryBoard;if(Array.isArray(extra.deliveryEvents))deliveryEvents=extra.deliveryEvents;if(extra.deliveryMeta&&typeof extra.deliveryMeta==="object")deliveryMeta=extra.deliveryMeta;if(extra.stageBoard&&typeof extra.stageBoard==="object"){stageBoard=extra.stageBoard;persistStageBoard()}if(Array.isArray(extra.cutSpeeds)&&extra.cutSpeeds.length){cutSpeeds=extra.cutSpeeds.map(x=>({t:x.t,v:x.v}));persistCutSpeeds();renderCutSpeedTable()}if(extra.serialRegistry&&typeof extra.serialRegistry==="object"){try{const cur=JSON.parse(localStorage.getItem(SERIAL_KEY)||"{}");const imp=extra.serialRegistry;const un=(a,b)=>[...new Set([...(Array.isArray(a)?a:[]),...(Array.isArray(b)?b:[])].map(String))];localStorage.setItem(SERIAL_KEY,JSON.stringify({next:Math.max(parseInt(cur.next,10)||1,parseInt(imp.next,10)||1),issued:un(cur.issued,imp.issued),retired:un(cur.retired,imp.retired)}))}catch(e){}}persistDelivery()}save();msg.textContent=`バックアップを読み込みました（${data.length}件）。`}else msg.textContent="読み込みをキャンセルしました。"}catch(err){msg.textContent="JSONを読み込めませんでした："+(err&&err.message?err.message:"形式が正しくありません")+"（このアプリで書き出したJSONを選んでください）"}}
+    }
+    if(confirm(`現在のデータをバックアップ内容（${data.length}件）で置き換えますか？`)){data.forEach(normalizeListData);lists=data;if(extra){if(Array.isArray(extra.deliveryBoard))deliveryBoard=extra.deliveryBoard;if(Array.isArray(extra.deliveryEvents))deliveryEvents=extra.deliveryEvents;if(extra.deliveryMeta&&typeof extra.deliveryMeta==="object")deliveryMeta=extra.deliveryMeta;if(extra.stageBoard&&typeof extra.stageBoard==="object"){stageBoard=extra.stageBoard;persistStageBoard()}if(Array.isArray(extra.cutSpeeds)&&extra.cutSpeeds.length){cutSpeeds=extra.cutSpeeds.map(x=>({t:x.t,v:x.v}));persistCutSpeeds();renderCutSpeedTable()}if(extra.serialRegistry&&typeof extra.serialRegistry==="object"){try{const cur=JSON.parse(localStorage.getItem(SERIAL_KEY)||"{}");const imp=extra.serialRegistry;const un=(a,b)=>[...new Set([...(Array.isArray(a)?a:[]),...(Array.isArray(b)?b:[])].map(String))];localStorage.setItem(SERIAL_KEY,JSON.stringify({next:Math.max(parseInt(cur.next,10)||1,parseInt(imp.next,10)||1),issued:un(cur.issued,imp.issued),retired:un(cur.retired,imp.retired)}))}catch(e){}}persistDelivery()}save();msg.textContent=`バックアップを読み込みました（${data.length}件）。`}else msg.textContent="読み込みをキャンセルしました。"}catch(err){msg.textContent="JSONを読み込めませんでした："+(err&&err.message?err.message:"形式が正しくありません")+"（このアプリで書き出したJSONを選んでください）"}}
 $("importPickBtn").onclick=()=>{$("backupMsg").textContent="";try{$("importFile").click()}catch(err){$("backupMsg").textContent="この環境ではファイル選択を開けません。ChromeやSafariなどのブラウザで開き直してください。"}};
 $("importFile").onchange=async e=>{const input=e.target,f=input.files[0];if(!f)return;$("importFileName").textContent="選択中："+f.name;try{await importBackupText(await f.text())}catch(err){$("backupMsg").textContent="ファイルを読み取れませんでした："+(err&&err.message||"")+"。"}finally{input.value=""}};
 
@@ -2677,19 +2682,24 @@ processUI();renderAll();
 // ===== Sync Bridge 初期化 =====
 if(window.Sync&&window.Sync.boot){
   let renderTimer=null;
+  const clearBizLocalStorage=()=>{
+    [KEY,EVENT_KEY,DELIVERY_META_KEY,STAGE_ORDER_KEY,DELIVERY_BOARD_KEY,CUT_SPEED_KEY,SERIAL_KEY,"factory_link_event_seq_v1"].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});
+  };
+  if(IS_FS_MODE)clearBizLocalStorage();
   const bridge={
     getLists:()=>lists,
-    setLists:ls=>{lists=ls;localStorage.setItem(KEY,JSON.stringify(lists))},
+    setLists:ls=>{lists=ls;if(!IS_FS_MODE)localStorage.setItem(KEY,JSON.stringify(lists))},
     getEvents:()=>deliveryEvents,
-    setEvents:evs=>{deliveryEvents=evs;localStorage.setItem(EVENT_KEY,JSON.stringify(deliveryEvents))},
+    setEvents:evs=>{deliveryEvents=evs;if(!IS_FS_MODE)localStorage.setItem(EVENT_KEY,JSON.stringify(deliveryEvents))},
     getMeta:()=>deliveryMeta,
-    setMeta:m=>{deliveryMeta=m;localStorage.setItem(DELIVERY_META_KEY,JSON.stringify(deliveryMeta))},
+    setMeta:m=>{deliveryMeta=m;if(!IS_FS_MODE)localStorage.setItem(DELIVERY_META_KEY,JSON.stringify(deliveryMeta))},
     getStageBoard:()=>stageBoard,
-    setStageBoard:sb=>{stageBoard=sb;localStorage.setItem(STAGE_ORDER_KEY,JSON.stringify(stageBoard))},
+    setStageBoard:sb=>{stageBoard=sb;if(!IS_FS_MODE)localStorage.setItem(STAGE_ORDER_KEY,JSON.stringify(stageBoard))},
     getDeliveryBoard:()=>deliveryBoard,
-    setDeliveryBoard:db=>{deliveryBoard=db;localStorage.setItem(DELIVERY_BOARD_KEY,JSON.stringify(deliveryBoard))},
+    setDeliveryBoard:db=>{deliveryBoard=db;if(!IS_FS_MODE)localStorage.setItem(DELIVERY_BOARD_KEY,JSON.stringify(deliveryBoard))},
     getCutSpeeds:()=>cutSpeeds,
-    setCutSpeeds:cs=>{cutSpeeds=cs;localStorage.setItem(CUT_SPEED_KEY,JSON.stringify(cutSpeeds))},
+    setCutSpeeds:cs=>{cutSpeeds=cs;if(!IS_FS_MODE)localStorage.setItem(CUT_SPEED_KEY,JSON.stringify(cutSpeeds))},
+    clearLocalCache:clearBizLocalStorage,
     loadCompleteDay:loadCompleteDay,
     normalize:normalizeListData,
     ensure:ensureOutsourcedPile,

@@ -35,12 +35,14 @@ const eq = (a, b) => canonicalJson(a) === canonicalJson(b);
 const TS = { __ts: true };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const isSafeDocId = id => typeof id === 'string' && id.length > 0 && id.length <= 200 && !id.includes('/') && id !== '.' && id !== '..' && id !== '__proto__' && id !== 'constructor' && id !== 'prototype';
-function getPath(o, p){ let t = o; for(const k of p){ if(t == null) return undefined; t = t[k]; } return t; }
+const isUnsafeKey = k => k === '__proto__' || k === 'constructor' || k === 'prototype';
+function getPath(o, p){ let t = o; for(const k of p){ if(isUnsafeKey(k) || t == null) return undefined; t = t[k]; } return t; }
 
 /* 差分判定 */
 function diff(base, cur, skip, path = [], ops = []){
   const keys = new Set([...Object.keys(base || {}), ...Object.keys(cur || {})]);
   for(const k of keys){
+    if(isUnsafeKey(k)) continue;
     const p = [...path, k]; if(skip && skip(p)) continue;
     const b = base ? base[k] : undefined, c = cur ? cur[k] : undefined;
     if(c === undefined){ if(b !== undefined) ops.push({ p, del: true }); continue; }
@@ -52,6 +54,7 @@ function diff(base, cur, skip, path = [], ops = []){
 function applyOps(doc, ops){
   const d = clone(doc) || {};
   for(const o of ops){
+    if(!o || !Array.isArray(o.p) || !o.p.length || o.p.some(isUnsafeKey)) continue;
     let t = d;
     for(let i = 0; i < o.p.length - 1; i++){ if(!isObj(t[o.p[i]])) t[o.p[i]] = {}; t = t[o.p[i]]; }
     const k = o.p[o.p.length - 1];
@@ -173,7 +176,9 @@ async function makeFirestore(){
   const auth = authMod.getAuth(app);
   let db;
   try {
-    if (typeof fsMod.initializeFirestore === 'function' && typeof fsMod.persistentLocalCache === 'function') {
+    if (CFG.persistentCache === false && typeof fsMod.initializeFirestore === 'function' && typeof fsMod.memoryLocalCache === 'function') {
+      db = fsMod.initializeFirestore(app, { localCache: fsMod.memoryLocalCache() });
+    } else if (CFG.persistentCache !== false && typeof fsMod.initializeFirestore === 'function' && typeof fsMod.persistentLocalCache === 'function') {
       const localCache = typeof fsMod.persistentMultipleTabManager === 'function'
         ? fsMod.persistentLocalCache({ tabManager: fsMod.persistentMultipleTabManager() })
         : fsMod.persistentLocalCache();
@@ -182,7 +187,7 @@ async function makeFirestore(){
       db = fsMod.getFirestore(app);
     }
   } catch (e) {
-    console.warn('persistentLocalCache unavailable, falling back to getFirestore:', e);
+    console.warn('Firestore cache initialization fallback:', e);
     db = fsMod.getFirestore(app);
   }
 
@@ -204,12 +209,20 @@ async function makeFirestore(){
       signOut: () => authMod.signOut(auth),
       changePassword: pw => authMod.updatePassword(auth.currentUser, pw)
     },
+    clearCache: async () => {
+      try { if (typeof fsMod.terminate === 'function') await fsMod.terminate(db); } catch (e) { console.warn('Firestore terminate skipped:', e); }
+      try { if (typeof fsMod.clearIndexedDbPersistence === 'function') await fsMod.clearIndexedDbPersistence(db); } catch (e) { console.warn('IndexedDB cache clear skipped:', e); }
+      try { if (typeof appMod.deleteApp === 'function') await appMod.deleteApp(app); } catch (e) { console.warn('Firebase deleteApp skipped:', e); }
+    },
     docGet: async (col, id) => fromFsDoc(await fsMod.getDoc(fsMod.doc(db, col, id))),
-    colGet: async (col, f) => {
+    colGet: async (col, f, opts) => {
       const cr = fsMod.collection(db, col);
-      const q = Array.isArray(f)
-        ? fsMod.query(cr, ...f.map(x => fsMod.where(x.field, x.op, x.value)))
-        : (f ? fsMod.query(cr, fsMod.where(f.field, f.op, f.value)) : cr);
+      const parts = [];
+      if (Array.isArray(f)) f.forEach(x => parts.push(fsMod.where(x.field, x.op, x.value)));
+      else if (f) parts.push(fsMod.where(f.field, f.op, f.value));
+      if (opts && opts.orderBy) parts.push(fsMod.orderBy(opts.orderBy.field, opts.orderBy.dir || 'asc'));
+      if (opts && opts.limit) parts.push(fsMod.limit(opts.limit));
+      const q = parts.length ? fsMod.query(cr, ...parts) : cr;
       const snap = await fsMod.getDocs(q);
       return snap.docs.map(d => ({ id: d.id, data: fromFsDoc(d) }));
     },
@@ -256,6 +269,7 @@ const S = {
   tabSubs: new Map(),  // タブ別の購読解除関数マップ（セッション中は維持して往復再読込を防ぐ）
   listUnsubs: [],      // リスト購読解除関数リスト
   staffUnsub: null,
+  authUnsub: null,
   qres: {},
   q: { lists: null, delivery: null, settings: null },
   enableAudit: true,   // 操作履歴保存スイッチ
@@ -322,7 +336,10 @@ function auditDoc(col, id, version, op, ops, base){
     fields: topFields(ops || [])
   };
 }
-const logId = (col, id, v) => `${col}__${id}__${v}`;
+const randId = () => (typeof crypto !== 'undefined' && crypto.randomUUID)
+  ? crypto.randomUUID().slice(0, 8)
+  : Math.random().toString(36).slice(2, 10);
+const logId = (col, id, v) => `${col}__${id}__${v}__${Date.now()}_${randId()}`;
 
 /* ---------- 同時編集対策・厳格なバージョン照合 (自動マージ禁止・強制上書き禁止) ---------- */
 async function txUpdate(tx, col, id, ops, base, pre){
@@ -759,7 +776,7 @@ function ingestLists(union){
     }
     out.push(merged);
   });
-  prevMap.forEach((l, id) => { if(!seen.has(id) && (S.pendingCreate.has(id) || !S.base.lists.has(id))) out.push(l); });
+  prevMap.forEach((l, id) => { if(!seen.has(id) && S.pendingCreate.has(id)) out.push(l); });
   for(const id of [...S.base.lists.keys()]){
     if(!seen.has(id) && !S.pendingCreate.has(id)){ S.base.lists.delete(id); S.raw.delete(id); changed = true; }
   }
@@ -1047,11 +1064,13 @@ async function doLogin(){
 }
 
 async function doChangePw(){
-  const a = document.getElementById('authNew1').value, b = document.getElementById('authNew2').value;
-  if(a.length < 10){ msg('パスワードは10文字以上にしてください'); return; }
+  const pw1El = document.getElementById('authNew1'), pw2El = document.getElementById('authNew2');
+  const a = pw1El.value.trim(), b = pw2El.value.trim();
+  if(a.length < 10){ msg('パスワードは10文字以上にしてください（前後の空白は除かれます）'); return; }
   if(a !== b){ msg('2つのパスワードが一致しません'); return; }
   try {
     await S.store.auth.changePassword(a);
+    pw1El.value = ''; pw2El.value = '';
     const cur = await S.store.docGet('staff', S.uid);
     const nv = (cur.version || 0) + 1;
     await S.store.runTx(async tx => {
@@ -1498,9 +1517,8 @@ async function deleteStaff(uid){
 async function purgeOldAuditLogs(){
   if(!Policy.admin(S.staff)) throw new Error('管理者のみ実行できます');
   const d = new Date(); d.setDate(d.getDate() - 30);
-  const cutoff = d.toISOString();
   toast('30日以上前の操作履歴を検索中...');
-  const logs = await S.store.colGet('auditLogs', { field: 'at', op: '<=', value: cutoff });
+  const logs = await S.store.colGet('auditLogs', { field: 'at', op: '<=', value: d });
   if(!logs.length){
     alert('30日以上経過した操作履歴はありません。');
     return 0;
@@ -1815,7 +1833,10 @@ async function exportAll(){
   let reportSummaryDocs = [];
   try { reportSummaryDocs = await st.colGet('reportSummaries', null); } catch(e){}
   let auditDocs = [];
-  try { auditDocs = (await st.colGet('auditLogs', null)).slice(-200); } catch(e){}
+  try {
+    auditDocs = await st.colGet('auditLogs', null, { orderBy: { field: 'at', dir: 'desc' }, limit: 200 });
+    auditDocs.reverse();
+  } catch(e){}
 
   const meta = {}, deliveryEvents = [];
   const outLists = lists.map(d => {
@@ -1867,29 +1888,130 @@ async function exportAll(){
   };
 }
 
+function showRestoreConfirmDialog({ listCount, eventCount, cutSpeedCount, summaryCount, staffDiffs }){
+  return new Promise(resolve => {
+    let dlg = document.getElementById('restoreConfirmDialog');
+    if(!dlg){
+      dlg = document.createElement('div');
+      dlg.id = 'restoreConfirmDialog';
+      dlg.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.82);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
+      document.body.appendChild(dlg);
+    }
+
+    const hasStaff = staffDiffs.length > 0;
+    const hasEscalation = staffDiffs.some(x => x.isEscalation);
+    const staffRowsHtml = staffDiffs.map(x => {
+      const badge = x.isEscalation
+        ? '<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700">管理者権限/昇格</span>'
+        : '<span style="background:#f1f5f9;color:#475569;padding:1px 6px;border-radius:4px;font-size:11px">一般</span>';
+      return `<tr style="${x.isEscalation ? 'background:#fef2f2' : ''}">
+        <td style="padding:5px 6px;border-bottom:1px solid #e2e8f0;font-weight:700">${esc(x.staffId || x.uid)}</td>
+        <td style="padding:5px 6px;border-bottom:1px solid #e2e8f0">${esc(x.name || '')}</td>
+        <td style="padding:5px 6px;border-bottom:1px solid #e2e8f0">${badge}</td>
+        <td style="padding:5px 6px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#334155">${esc(x.summary)}</td>
+      </tr>`;
+    }).join('');
+
+    dlg.innerHTML = `
+      <div style="background:#fff;border-radius:16px;width:min(94vw,640px);max-height:88vh;overflow-y:auto;padding:24px;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);border:2px solid #cbd5e1;box-sizing:border-box">
+        <h2 style="margin:0 0 10px;font-size:18px;font-weight:800;color:#0f172a">バックアップ復元の確認</h2>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;color:#1e293b;margin-bottom:14px">
+          <div>・案件数: <b>${listCount}</b> 件</div>
+          <div>・配送イベント: <b>${eventCount}</b> 件</div>
+          <div>・設定（切断速度）: <b>${cutSpeedCount}</b> 件</div>
+          <div>・日報月別サマリー: <b>${summaryCount}</b> 件</div>
+        </div>
+        ${hasStaff ? `
+          <div style="border:1.5px solid ${hasEscalation ? '#ef4444' : '#cbd5e1'};background:${hasEscalation ? '#fff5f5' : '#f8fafc'};border-radius:10px;padding:12px;margin-bottom:14px">
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;font-weight:700;color:#0f172a">
+              <input id="restoreStaffChk" type="checkbox" style="width:auto;margin-top:3px">
+              <span>社員権限情報（${staffDiffs.length} 名）も復元する（通常はオフ推奨：業務データのみ復元）</span>
+            </label>
+            <p style="margin:6px 0 8px;font-size:11.5px;color:#64748b">
+              ※ 外部ファイルによる意図しない権限変更・管理者昇格を防ぐため、社員権限の復元は既定でオフになっています。
+            </p>
+            <div style="max-height:180px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;background:#fff">
+              <table style="width:100%;border-collapse:collapse;font-size:12px;text-align:left">
+                <thead><tr style="background:#f8fafc"><th style="padding:5px 6px;border-bottom:1px solid #e2e8f0">社員ID</th><th style="padding:5px 6px;border-bottom:1px solid #e2e8f0">氏名</th><th style="padding:5px 6px;border-bottom:1px solid #e2e8f0">種別</th><th style="padding:5px 6px;border-bottom:1px solid #e2e8f0">変更内容</th></tr></thead>
+                <tbody>${staffRowsHtml}</tbody>
+              </table>
+            </div>
+          </div>
+        ` : ''}
+        <p style="margin:0 0 14px;font-size:12.5px;color:#b91c1c;font-weight:600">
+          ※ 復元を実行すると、該当する現在のデータがバックアップ内容で上書きされます。
+        </p>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button id="restoreCancelBtn" type="button" style="padding:10px 16px;font-size:13px;font-weight:600;background:#e2e8f0;color:#334155;border:0;border-radius:8px;cursor:pointer">キャンセル</button>
+          <button id="restoreOkBtn" type="button" style="padding:10px 18px;font-size:13px;font-weight:700;background:#2563eb;color:#fff;border:0;border-radius:8px;cursor:pointer">復元を実行</button>
+        </div>
+      </div>
+    `;
+    dlg.style.display = 'flex';
+
+    document.getElementById('restoreCancelBtn').onclick = () => {
+      dlg.style.display = 'none';
+      resolve({ ok: false, includeStaff: false });
+    };
+    document.getElementById('restoreOkBtn').onclick = () => {
+      const chk = document.getElementById('restoreStaffChk');
+      const includeStaff = !!(chk && chk.checked);
+      dlg.style.display = 'none';
+      resolve({ ok: true, includeStaff });
+    };
+  });
+}
+
 async function restore(data){
   if(!Policy.admin(S.staff)) throw new Error('管理者のみ実行できます');
   if(!data || typeof data !== 'object') throw new Error('復元データの形式が正しくありません');
 
   const all = Array.isArray(data) ? data : (data.lists || []);
-  const evs = data.deliveryEvents || [];
-  const meta = data.deliveryMeta || {};
-  const staff = data.staff || [];
-  const cutSpeeds = data.cutSpeeds || [];
-
-  // 事前に復元対象と件数を表示
-  const preview = `【復元対象の確認】
-- 案件数: ${all.length} 件
-- 配送イベント: ${evs.length} 件
-- 設定（切断速度）: ${cutSpeeds.length} 件
-- 社員権限情報: ${staff.length} 名
-
-※ 復元を実行すると、現在のデータがバックアップ内容で上書きされます。
-本当に復元を実行しますか？`;
-
-  if(!confirm(preview)) return 0;
+  const evs = Array.isArray(data.deliveryEvents) ? data.deliveryEvents : [];
+  const meta = isObj(data.deliveryMeta) ? data.deliveryMeta : {};
+  const staff = Array.isArray(data.staff) ? data.staff : [];
+  const cutSpeeds = Array.isArray(data.cutSpeeds) ? data.cutSpeeds : [];
+  const reportSummaries = Array.isArray(data.reportSummaries) ? data.reportSummaries : [];
 
   const st = S.store;
+  const curStaffMap = new Map();
+  if(staff.length){
+    try {
+      const curDocs = await st.colGet('staff', null);
+      curDocs.forEach(d => curStaffMap.set(d.id, d.data));
+    } catch(e){}
+  }
+
+  const validStaff = staff
+    .filter(stf => stf && typeof stf === 'object' && isSafeDocId(String(stf.uid || '')) && stf.uid !== S.uid)
+    .map(stf => {
+      const uid = String(stf.uid);
+      const role = stf.role === 'admin' ? 'admin' : 'staff';
+      const active = !!stf.active;
+      const allowedTabs = role === 'admin'
+        ? TAB_IDS.slice()
+        : (Array.isArray(stf.allowedTabs) ? stf.allowedTabs.filter(t => TAB_IDS.includes(t)) : []);
+      const actions = { deleteList: !!(stf.actions && stf.actions.deleteList) };
+      const prev = curStaffMap.get(uid);
+      const prevRole = prev ? prev.role : '未登録';
+      const prevActive = prev ? (prev.active ? '有効' : '無効') : '新規';
+      const nextActive = active ? '有効' : '無効';
+      const isEscalation = role === 'admin' && (!prev || prev.role !== 'admin' || !prev.active);
+      const summary = prev
+        ? `ロール:${prevRole}→${role} / 状態:${prevActive}→${nextActive} / タブ:${allowedTabs.length}件`
+        : `新規登録 / ロール:${role} / 状態:${nextActive} / タブ:${allowedTabs.length}件`;
+      return { uid, staffId: String(stf.staffId || uid), name: String(stf.name || ''), role, active, allowedTabs, actions, createdAt: stf.createdAt, isEscalation, summary };
+    });
+
+  const choice = await showRestoreConfirmDialog({
+    listCount: all.length,
+    eventCount: evs.length,
+    cutSpeedCount: cutSpeeds.length,
+    summaryCount: reportSummaries.length,
+    staffDiffs: validStaff
+  });
+  if(!choice.ok) return null;
+
   let restoredLists = 0;
 
   try {
@@ -1917,15 +2039,27 @@ async function restore(data){
         const pre = await tx.get('events', id);
         const m = meta['E:'+id] || {};
         const nv = (pre && pre.version || 0) + 1;
-        tx.set('events', id, { ...e, slip: m.slip || '', sales: m.sales || '', date: e.date || '', deleted: false, version: nv, createdBy: S.uid, updatedAt: TS, updatedBy: S.uid });
+        const cleanEv = {
+          id,
+          serial: String(e.serial || ''),
+          date: String(e.date || ''),
+          type: String(e.type || ''),
+          customer: String(e.customer || ''),
+          job: String(e.job || ''),
+          destination: String(e.destination || ''),
+          note: String(e.note || ''),
+          createdAt: e.createdAt || new Date().toISOString()
+        };
+        tx.set('events', id, { ...cleanEv, slip: String(m.slip || ''), sales: String(m.sales || ''), deleted: false, version: nv, createdBy: S.uid, updatedAt: TS, updatedBy: S.uid });
       });
     }
 
-    if(Array.isArray(cutSpeeds) && cutSpeeds.length){
+    if(cutSpeeds.length){
+      const cleanSpeeds = cutSpeeds.map(x => ({ t: x && x.t, v: x && x.v }));
       await st.runTx(async tx => {
         const pre = await tx.get('settings', 'cutSpeeds');
         const nv = (pre && pre.version || 0) + 1;
-        tx.set('settings', 'cutSpeeds', { items: cutSpeeds, deleted: false, version: nv, createdBy: S.uid, updatedAt: TS, updatedBy: S.uid });
+        tx.set('settings', 'cutSpeeds', { items: cleanSpeeds, deleted: false, version: nv, createdBy: S.uid, updatedAt: TS, updatedBy: S.uid });
       });
     }
 
@@ -1938,22 +2072,29 @@ async function restore(data){
       });
     }
 
-    if(Array.isArray(data.reportSummaries) && data.reportSummaries.length){
-      for(const rs of data.reportSummaries){
+    if(reportSummaries.length){
+      for(const rs of reportSummaries){
         if(!rs || typeof rs !== 'object' || !isSafeDocId(String(rs.month || ''))) continue;
         try {
           await st.runTx(async tx => {
-            const pre = await tx.get('reportSummaries', String(rs.month));
+            const month = String(rs.month);
+            const pre = await tx.get('reportSummaries', month);
             const nv = ((pre && pre.version) || 0) + 1;
-            tx.set('reportSummaries', String(rs.month), { ...rs, version: nv, updatedAt: TS, updatedBy: S.uid });
+            tx.set('reportSummaries', month, {
+              month,
+              entries: isObj(rs.entries) ? clone(rs.entries) : {},
+              archivedSerials: Array.isArray(rs.archivedSerials) ? rs.archivedSerials.map(String) : [],
+              version: nv,
+              updatedAt: TS,
+              updatedBy: S.uid
+            });
           });
         } catch(e){}
       }
     }
 
-    if(Array.isArray(staff)){
-      for(const stf of staff){
-        if(!stf || typeof stf !== 'object' || !isSafeDocId(String(stf.uid || '')) || stf.uid === S.uid) continue; // ログイン中本人は保護
+    if(choice.includeStaff && validStaff.length){
+      for(const stf of validStaff){
         try {
           await st.runTx(async tx => {
             const pre = await tx.get('staff', stf.uid);
@@ -1963,8 +2104,8 @@ async function restore(data){
               name: stf.name,
               role: stf.role,
               active: stf.active,
-              allowedTabs: stf.allowedTabs || [],
-              actions: stf.actions || {},
+              allowedTabs: stf.allowedTabs,
+              actions: stf.actions,
               mustChangePassword: false,
               version: nv,
               createdAt: stf.createdAt || new Date().toISOString(),
@@ -1978,7 +2119,7 @@ async function restore(data){
     }
 
     resync();
-    alert(`復元が正常に完了しました（案件 ${restoredLists}件、配送イベント ${evs.length}件）。\n画面を最新状態に再同期しました。`);
+    alert(`復元が正常に完了しました（案件 ${restoredLists}件、配送イベント ${evs.length}件${choice.includeStaff ? `、社員権限 ${validStaff.length}名` : ''}）。\n画面を最新状態に再同期しました。`);
     return restoredLists;
   } catch(err) {
     console.error('復元エラー:', err);
@@ -1992,7 +2133,8 @@ async function restore(data){
    ==================================================================== */
 function initAuthListener(){
   if(!S.store || !S.store.auth) return;
-  S.store.auth.onChange(async u => {
+  if(S.authUnsub){ try{ S.authUnsub(); }catch(e){} S.authUnsub = null; }
+  S.authUnsub = S.store.auth.onChange(async u => {
     if(S.staffUnsub){ try{ S.staffUnsub(); }catch(e){} S.staffUnsub = null; }
     if(!u){ S.uid = null; S.staff = null; showLogin(); return; }
     S.uid = u.uid; let first = true;
@@ -2059,11 +2201,24 @@ const Sync = {
   isAuditEnabled(){ return S.enableAudit; },
   async logout(){
     stopData();
-    if(S.store && S.store.auth) await S.store.auth.signOut();
+    if(S.staffUnsub){ try{ S.staffUnsub(); }catch(e){} S.staffUnsub = null; }
+    if(S.authUnsub){ try{ S.authUnsub(); }catch(e){} S.authUnsub = null; }
+    if(S.store && S.store.auth){
+      try{ await S.store.auth.signOut(); }catch(e){}
+    }
+    if(S.store && S.store.clearCache){
+      try{ await S.store.clearCache(); }catch(e){}
+    }
+    S.store = null;
+    S.uid = null;
+    S.staff = null;
+    if(S.B && S.B.clearLocalCache){
+      try{ S.B.clearLocalCache(); }catch(e){}
+    }
+    showLogin();
   },
   isAdmin: () => Policy.admin(S.staff),
-  staff: () => S.staff,
-  _state: S
+  staff: () => S.staff
 };
 
 window.Sync = Sync;
