@@ -170,7 +170,20 @@ async function makeFirestore(){
 
   const app = appMod.getApps().length ? appMod.getApp() : appMod.initializeApp(CFG.firebase);
   const auth = authMod.getAuth(app);
-  const db = fsMod.getFirestore(app);
+  let db;
+  try {
+    if (typeof fsMod.initializeFirestore === 'function' && typeof fsMod.persistentLocalCache === 'function') {
+      const localCache = typeof fsMod.persistentMultipleTabManager === 'function'
+        ? fsMod.persistentLocalCache({ tabManager: fsMod.persistentMultipleTabManager() })
+        : fsMod.persistentLocalCache();
+      db = fsMod.initializeFirestore(app, { localCache });
+    } else {
+      db = fsMod.getFirestore(app);
+    }
+  } catch (e) {
+    console.warn('persistentLocalCache unavailable, falling back to getFirestore:', e);
+    db = fsMod.getFirestore(app);
+  }
 
   const toFsVal = v => (v && v.__ts) ? fsMod.serverTimestamp() : v;
   const fromFsDoc = d => {
@@ -235,7 +248,8 @@ const S = {
   raw: new Map(),
   pendingCreate: new Set(),
   activeTab: 'dashboard',
-  tabUnsubs: [],       // 現在開いているタブ限定の購読解除関数リスト
+  tabUnsubs: [],       // 後方互換用
+  tabSubs: new Map(),  // タブ別の購読解除関数マップ（セッション中は維持して往復再読込を防ぐ）
   listUnsubs: [],      // リスト購読解除関数リスト
   staffUnsub: null,
   qres: {},
@@ -785,10 +799,29 @@ function ingestBoards(docs){
   B.setStageBoard(stage); B.setDeliveryBoard(dboard); B.renderSoon();
 }
 
-/* ---------- 無料枠最優先・タブ限定リアルタイム購読 ---------- */
+/* ---------- 無料枠最優先・オンデマンド起動＆セッション維持リアルタイム購読 ---------- */
+function stopTabSubs(){
+  if(S.tabSubs){
+    S.tabSubs.forEach(list => list.forEach(f => { try{ f(); }catch(e){} }));
+    S.tabSubs.clear();
+  }
+  S.tabUnsubs.forEach(f => { try{ f(); }catch(e){} }); S.tabUnsubs = [];
+}
+
+function pruneTabSubs(){
+  if(!S.tabSubs || !S.staff) return;
+  for(const [k, list] of [...S.tabSubs.entries()]){
+    const ok = k === 'staff' ? Policy.admin(S.staff) : Policy.hasTab(S.staff, k);
+    if(!ok){
+      list.forEach(f => { try{ f(); }catch(e){} });
+      S.tabSubs.delete(k);
+    }
+  }
+}
+
 function stopData(){
   S.listUnsubs.forEach(f => { try{ f(); }catch(e){} }); S.listUnsubs = [];
-  S.tabUnsubs.forEach(f => { try{ f(); }catch(e){} }); S.tabUnsubs = [];
+  stopTabSubs();
   clearInterval(S.dayTimer);
 }
 
@@ -811,43 +844,51 @@ function startLists(){
   sub('recent', { field: 'closedDay', op: '>=', value: S.day });
 }
 
-// タブ切り替え時の購読制御（開いているタブに必要なデータだけ購読、前タブの購読は解除）
+// タブ切り替え時の購読制御（未購読タブだけ新規購読し、一度開いたタブの監視はセッション中維持して往復再読込を防ぐ）
 function switchTab(tabId){
   S.activeTab = tabId || 'dashboard';
-  // 前のタブ専用の購読を解除
-  S.tabUnsubs.forEach(f => { try{ f(); }catch(e){} }); S.tabUnsubs = [];
-
   if(!S.store || !S.staff) return;
+  pruneTabSubs();
 
   // 1. 社員管理タブ
   if(tabId === 'staff'){
-    if(Policy.admin(S.staff)){
-      S.tabUnsubs.push(S.store.colWatch('staff', null, renderStaffAdmin, e => toast('社員一覧取得に失敗：' + (e.message || e), 'err')));
+    if(Policy.admin(S.staff) && !S.tabSubs.has('staff')){
+      const u = S.store.colWatch('staff', null, renderStaffAdmin, e => toast('社員一覧取得に失敗：' + (e.message || e), 'err'));
+      S.tabSubs.set('staff', [u]);
     }
     return;
   }
 
   // 2. 配達表タブ
   if(tabId === 'delivery'){
-    const cutoff = (() => { const d = new Date(); d.setDate(d.getDate() - 60); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
-    S.tabUnsubs.push(S.store.colWatch('events', { field: 'date', op: '>=', value: cutoff }, ingestEvents, e => toast('配送イベント取得に失敗：' + (e.message || e), 'err')));
-    S.tabUnsubs.push(S.store.colWatch('boards', { field: 'tab', op: '==', value: 'delivery' }, ingestBoards, e => toast('配達メモ取得に失敗：' + (e.message || e), 'err')));
+    if(!S.tabSubs.has('delivery')){
+      const cutoff = (() => { const d = new Date(); d.setDate(d.getDate() - 60); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+      const u1 = S.store.colWatch('events', { field: 'date', op: '>=', value: cutoff }, ingestEvents, e => toast('配送イベント取得に失敗：' + (e.message || e), 'err'));
+      const u2 = S.store.colWatch('boards', { field: 'tab', op: '==', value: 'delivery' }, ingestBoards, e => toast('配達メモ取得に失敗：' + (e.message || e), 'err'));
+      S.tabSubs.set('delivery', [u1, u2]);
+    }
     if(!S.listUnsubs.length) startLists();
     return;
   }
 
   // 3. 各工程タブ（当該工程のメモ表のみを購読）
   if(STAGE_TABS.includes(tabId)){
-    S.tabUnsubs.push(S.store.colWatch('boards', { field: 'tab', op: '==', value: tabId }, ingestBoards, e => toast('工程メモ取得に失敗：' + (e.message || e), 'err')));
+    if(!S.tabSubs.has(tabId)){
+      const u = S.store.colWatch('boards', { field: 'tab', op: '==', value: tabId }, ingestBoards, e => toast('工程メモ取得に失敗：' + (e.message || e), 'err'));
+      S.tabSubs.set(tabId, [u]);
+    }
     if(!S.listUnsubs.length) startLists();
     return;
   }
 
   // 4. 生産計画タブ
   if(tabId === 'plan'){
-    S.tabUnsubs.push(S.store.docWatch('settings', 'cutSpeeds', d => {
-      if(d && Array.isArray(d.items)){ S.base.settings = { items: clone(d.items) }; S.B.setCutSpeeds(clone(d.items)); S.B.renderSoon(); }
-    }, e => toast('設定取得に失敗：' + (e.message || e), 'err')));
+    if(!S.tabSubs.has('plan')){
+      const u = S.store.docWatch('settings', 'cutSpeeds', d => {
+        if(d && Array.isArray(d.items)){ S.base.settings = { items: clone(d.items) }; S.B.setCutSpeeds(clone(d.items)); S.B.renderSoon(); }
+      }, e => toast('設定取得に失敗：' + (e.message || e), 'err'));
+      S.tabSubs.set('plan', [u]);
+    }
     if(!S.listUnsubs.length) startLists();
     return;
   }
@@ -865,6 +906,7 @@ function resync(){
   const B = S.B; S.raw.clear(); S.pendingCreate.clear(); B.setLists([]); S.base.lists.clear();
   S.reportClosedLists.clear(); S.reportLoadedSince = null;
   S.reportSummaries.clear(); S.reportSummaryFetched.clear();
+  stopTabSubs();
   startLists();
   switchTab(S.activeTab);
 }
