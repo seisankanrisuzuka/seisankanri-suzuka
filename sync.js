@@ -242,6 +242,9 @@ async function makeFirestore(){
 /* ====================================================================
    状態管理・変換ロジック
    ==================================================================== */
+let STAFF_CACHE = [];
+const STAFF_OPEN_UIDS = new Set();
+
 const S = {
   store: null, uid: null, staff: null,
   B: null, started: false,
@@ -389,10 +392,10 @@ function showConflictDialog(info){
   }
   const whoUid = (info.cur && info.cur.updatedBy) || info.updatedBy || '';
   const isMe = whoUid && whoUid === S.uid;
-  const staffObj = STAFF_CACHE.find(x => x.id === whoUid);
+  const staffObj = STAFF_CACHE.find(x => x && x.id === whoUid);
   const who = isMe
     ? 'あなた（別の端末または直前の操作）'
-    : (staffObj ? `${staffObj.data.name}（ID: ${staffObj.data.staffId}）` : (whoUid || '他の社員'));
+    : (staffObj && staffObj.data ? `${staffObj.data.name}（ID: ${staffObj.data.staffId}）` : (whoUid || '他の社員'));
   const when = info.updatedAt ? new Date(info.updatedAt).toLocaleTimeString('ja-JP') : '直前';
 
   const targetLabel = info.col === 'boards'
@@ -1166,9 +1169,6 @@ async function enter(){
 /* ====================================================================
    社員管理画面（管理者専用・タブ別チェックボックス設定）
    ==================================================================== */
-let STAFF_CACHE = [];
-const STAFF_OPEN_UIDS = new Set();
-
 window.toggleStaffRow = function(uid){
   const body = document.getElementById('staffDetail_' + uid);
   const icon = document.getElementById('staffToggleIcon_' + uid);
