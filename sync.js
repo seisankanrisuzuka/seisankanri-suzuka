@@ -298,8 +298,12 @@ function listToDoc(l){
   d.piles = (l.piles !== undefined && l.piles !== null && l.piles !== '') ? Number(l.piles) : null;
   d.pileItems = Array.isArray(l.pileItems) ? clone(l.pileItems) : [];
   d.loads = Array.isArray(l.loads) ? clone(l.loads) : [];
-  d.isOpen = !(l.delivered || (l.processCompleted && Object.values(l.processCompleted).every(Boolean)));
-  d.closedDay = d.isOpen ? '' : ((l.processDoneDates && Object.values(l.processDoneDates).sort().pop()) || today());
+  const procs = Array.isArray(l.processes) ? l.processes : [];
+  const procsDone = procs.length > 0 && procs.every(p => (l.processStatus && l.processStatus[p] === 'done') || (l.processCompleted && l.processCompleted[p]));
+  const loadDay = (S.B && S.B.loadCompleteDay) ? S.B.loadCompleteDay(l) : null;
+  const doneMaxDay = (l.processDoneDates && Object.values(l.processDoneDates).filter(Boolean).sort().pop()) || '';
+  d.isOpen = !(l.delivered === true || (loadDay !== null && (procs.length === 0 || procsDone)));
+  d.closedDay = d.isOpen ? '' : ((loadDay && loadDay !== '0000-00-00') ? loadDay : (doneMaxDay || today()));
   return d;
 }
 function docToList(d, selMap){
@@ -511,6 +515,9 @@ function pushLists(){ return chain(S.q, 'lists', async () => {
         }
         if(!hasPile){
           ops = ops.filter(o => FIELD_GROUP[o.p[0]] !== 'piles');
+        }
+        if(!hasRegister && !hasPile){
+          ops = ops.filter(o => !DERIVED.includes(o.p[0]));
         }
       }
       if(ops.length) jobs.push({ kind: 'update', id, ops, base: b });
