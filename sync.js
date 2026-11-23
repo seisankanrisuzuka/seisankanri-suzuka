@@ -34,6 +34,7 @@ function canonicalJson(v){
 const eq = (a, b) => canonicalJson(a) === canonicalJson(b);
 const TS = { __ts: true };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const isSafeDocId = id => typeof id === 'string' && id.length > 0 && id.length <= 200 && !id.includes('/') && id !== '.' && id !== '..' && id !== '__proto__' && id !== 'constructor' && id !== 'prototype';
 function getPath(o, p){ let t = o; for(const k of p){ if(t == null) return undefined; t = t[k]; } return t; }
 
 /* 差分判定 */
@@ -1144,7 +1145,7 @@ async function enter(){
   if(ov) ov.style.display = 'none';
   document.body.classList.remove('locked');
   applyPerms();
-  toast('ログインしました（' + esc(S.staff.name || S.staff.staffId) + '）');
+  toast('ログインしました（' + (S.staff.name || S.staff.staffId) + '）');
 
   if(!S.started){
     S.started = true;
@@ -1255,6 +1256,8 @@ function renderStaffAdmin(docs){
   </div>`;
 
   document.getElementById('stfAdd').onclick = addStaffRecord;
+  box.querySelectorAll('[data-staff-toggle]').forEach(el => { el.onclick = () => window.toggleStaffRow(el.dataset.staffToggle); });
+  box.querySelectorAll('[data-staff-role]').forEach(sel => { sel.onchange = () => window.onStaffRoleChange(sel.dataset.staffRole, sel.value); });
   box.querySelectorAll('[data-save]').forEach(b => b.onclick = () => saveStaff(b.dataset.save));
   box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => deleteStaff(b.dataset.del));
 }
@@ -1297,7 +1300,7 @@ function staffRow(r, adminsActive){
 
   return `<div class="staff-row ${d.active ? '' : 'off'}" data-uid="${esc(r.id)}" data-search="${esc(searchIndex)}" style="background:#fff;border:1px solid #cbd5e1;border-radius:10px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.04);overflow:hidden">
     <!-- クリックで開閉できるヘッダー行（20人並んでも一覧でスッキリ見渡せる） -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;cursor:pointer;user-select:none;gap:10px;flex-wrap:wrap" onclick="window.toggleStaffRow('${esc(r.id)}')">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;cursor:pointer;user-select:none;gap:10px;flex-wrap:wrap" data-staff-toggle="${esc(r.id)}">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <span id="staffToggleIcon_${esc(r.id)}" style="font-size:12px;color:#64748b;width:14px;display:inline-block">${isOpen ? '▼' : '▶'}</span>
         <b style="font-size:15px;color:#0f172a">${esc(d.staffId)}</b>
@@ -1323,7 +1326,7 @@ function staffRow(r, adminsActive){
       ${self ? `<div class="help" style="color:#64748b">※ ログイン中の自分自身のアカウント権限は変更できません。</div>` : `
         <div class="row" style="margin-top:6px;gap:12px">
           <div class="field" style="flex:1"><label>権限ロール</label>
-            <select data-f="role" onchange="window.onStaffRoleChange('${esc(r.id)}', this.value)">
+            <select data-f="role" data-staff-role="${esc(r.id)}">
               <option value="staff" ${!isAdmin ? 'selected' : ''}>一般社員（許可タブのみ利用）</option>
               <option value="admin" ${isAdmin ? 'selected' : ''}>管理者（全機能・全タブ・社員管理）</option>
             </select>
@@ -1370,6 +1373,7 @@ async function addStaffRecord(){
   const m = document.getElementById('stfMsg');
 
   if(!uid){ m.textContent = 'Firebase UIDを入力してください'; return; }
+  if(!isSafeDocId(uid)){ m.textContent = 'Firebase UIDの形式が不正です（スラッシュ等は使用できません）'; return; }
   if(!id){ m.textContent = '社員IDを入力してください'; return; }
   if(!name){ m.textContent = '表示名を入力してください'; return; }
 
@@ -1889,8 +1893,9 @@ async function restore(data){
   let restoredLists = 0;
 
   try {
-    for(let i = 0; i < all.length; i += 4){
-      const chunk = all.slice(i, i + 4);
+    const validLists = all.filter(l => l && typeof l === 'object' && isSafeDocId(String(l.serial || '')));
+    for(let i = 0; i < validLists.length; i += 4){
+      const chunk = validLists.slice(i, i + 4);
       await st.runTx(async tx => {
         const pre = []; for(const l of chunk) pre.push(await tx.get('lists', String(l.serial)));
         chunk.forEach((l, k) => {
@@ -1906,6 +1911,7 @@ async function restore(data){
     }
 
     for(const e of evs){
+      if(!e || typeof e !== 'object' || !isSafeDocId(String(e.id || ''))) continue;
       await st.runTx(async tx => {
         const id = String(e.id);
         const pre = await tx.get('events', id);
@@ -1923,7 +1929,7 @@ async function restore(data){
       });
     }
 
-    const mx = all.reduce((a, l) => { const m = /^S(\d{5})$/.exec(String(l.serial)); return m ? Math.max(a, +m[1]) : a; }, 0);
+    const mx = validLists.reduce((a, l) => { const m = /^S(\d{5})$/.exec(String(l.serial)); return m ? Math.max(a, +m[1]) : a; }, 0);
     if(mx){
       await st.runTx(async tx => {
         const c = await tx.get('counters', 'serial');
@@ -1934,7 +1940,7 @@ async function restore(data){
 
     if(Array.isArray(data.reportSummaries) && data.reportSummaries.length){
       for(const rs of data.reportSummaries){
-        if(!rs || !rs.month) continue;
+        if(!rs || typeof rs !== 'object' || !isSafeDocId(String(rs.month || ''))) continue;
         try {
           await st.runTx(async tx => {
             const pre = await tx.get('reportSummaries', String(rs.month));
@@ -1947,7 +1953,7 @@ async function restore(data){
 
     if(Array.isArray(staff)){
       for(const stf of staff){
-        if(stf.uid === S.uid) continue; // ログイン中本人は保護
+        if(!stf || typeof stf !== 'object' || !isSafeDocId(String(stf.uid || '')) || stf.uid === S.uid) continue; // ログイン中本人は保護
         try {
           await st.runTx(async tx => {
             const pre = await tx.get('staff', stf.uid);
