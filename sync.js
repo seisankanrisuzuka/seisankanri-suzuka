@@ -279,7 +279,9 @@ const S = {
   reportSummaries: new Map(),
   reportSummaryFetched: new Set(),
   reportLoading: false,
-  reportRulesWarn: false
+  reportRulesWarn: false,
+  searchEvents: new Map(),
+  searchEventsSince: null
 };
 
 const idToEmail = id => id.includes('@') ? id : `${id}@${CFG.idDomain || 'seisankanri-suzuka-aa08c.firebaseapp.com'}`;
@@ -305,8 +307,11 @@ function listToDoc(l){
   });
   const loadDay = (S.B && S.B.loadCompleteDay) ? S.B.loadCompleteDay(l) : null;
   const doneMaxDay = (l.processDoneDates && Object.values(l.processDoneDates).filter(Boolean).sort().pop()) || '';
-  d.isOpen = !(l.delivered === true || (loadDay !== null && (procs.length === 0 || procsDone)));
-  d.closedDay = d.isOpen ? '' : ((loadDay && loadDay !== '0000-00-00') ? loadDay : (doneMaxDay || today()));
+  const directShip = l.deliveryMethod === '外注先から直送';
+  const directEnd = l.dueEnd || l.dueStart || l.due || '';
+  const directExpired = directShip && !!directEnd && directEnd < today();
+  d.isOpen = !(l.delivered === true || (loadDay !== null && (procs.length === 0 || procsDone)) || directExpired);
+  d.closedDay = d.isOpen ? '' : ((loadDay && loadDay !== '0000-00-00') ? loadDay : (directExpired ? directEnd : (doneMaxDay || today())));
   return d;
 }
 function docToList(d, selMap){
@@ -644,6 +649,17 @@ function pushDelivery(stageOnly){ return chain(S.q, 'delivery', async () => {
         if(ops.length) jobs.push({ col: 'events', id, ops, base: b });
       }
     }
+    for(const [id, b] of S.base.events){
+      if(!curEv.has(id)){
+        jobs.push({
+          col: 'events',
+          id,
+          deleteEvent: true,
+          ops: [{ p: ['deleted'], v: true }, { p: ['deletedAt'], v: TS }, { p: ['deletedBy'], v: S.uid }],
+          base: b
+        });
+      }
+    }
   }
 
   const boards = [{ key: 'delivery', arr: B.getDeliveryBoard() }, ...Object.entries(B.getStageBoard() || {}).map(([key, arr]) => ({ key, arr }))];
@@ -684,7 +700,7 @@ function pushDelivery(stageOnly){ return chain(S.q, 'delivery', async () => {
               out.push({ j, latest: j.doc, version: 1 });
             }
           } else {
-            if(!pre[k]){ out.push({ j, gone: true }); continue; }
+            if(!pre[k] || (j.deleteEvent && pre[k].deleted)){ out.push({ j, gone: true }); continue; }
             out.push({ j, ...await txUpdate(tx, j.col, j.id, j.ops, j.base, pre[k]) });
           }
         }
@@ -692,8 +708,14 @@ function pushDelivery(stageOnly){ return chain(S.q, 'delivery', async () => {
       });
 
       for(const r of res){
-        if(r.gone) continue;
         const j = r.j;
+        if(r.gone || j.deleteEvent){
+          if(j.col === 'events'){
+            S.base.events.delete(j.id);
+            S.searchEvents.delete(j.id);
+          }
+          continue;
+        }
         if(j.col === 'lists'){
           S.base.info = S.base.info || new Map();
           S.base.info.set(j.id, { ...(S.base.info.get(j.id) || {}), ...Object.fromEntries(j.ops.map(o => [o.p[1], o.v])) });
@@ -797,8 +819,10 @@ function ingestLists(union){
 
 function ingestEvents(docs){
   const B = S.B; const prevEv = new Map(B.getEvents().map(e => [String(e.id), e])); const meta = B.getMeta(); const out = []; let ch = false;
+  const activeIds = new Set();
   docs.forEach(({ id, data }) => {
-    if(data.deleted) return;
+    if(!data || data.deleted) return;
+    activeIds.add(id);
     const sd = stripEv(data); const old = S.base.events.get(id); const prev = prevEv.get(id);
     const pend = (prev && old) ? diff(old, evDoc(prev, meta), skipLocal) : [];
     S.base.events.set(id, sd);
@@ -810,6 +834,9 @@ function ingestEvents(docs){
       if(m.slip !== slip || m.sales !== sales){ meta[k] = { slip: slip || '', sales: sales || '' }; ch = true; }
     }
   });
+  for(const id of [...S.base.events.keys()]){
+    if(!activeIds.has(id)) S.base.events.delete(id);
+  }
   out.sort((a, b) => String(a.id).localeCompare(String(b.id)));
   if(ch) B.setMeta(meta); B.setEvents(out); B.renderSoon();
 }
@@ -931,13 +958,25 @@ function switchTab(tabId){
     return;
   }
 
-  // 6. 実績集計・配達検索・データ管理タブ（常時購読不要）
+  // 6. 配送検索タブ（直近90日の完了案件・イベントをオンデマンド読込）
+  if(tabId === 'delivery-search'){
+    if(!S.listUnsubs.length) startLists();
+    if(!S.tabSubs.has('delivery') && !S.tabSubs.has('delivery-search')){
+      const cutoff = repMinusDays(today(), 60);
+      const u = S.store.colWatch('events', { field: 'date', op: '>=', value: cutoff }, ingestEvents, e => toast('配送イベント取得に失敗：' + (e.message || e), 'err'));
+      S.tabSubs.set('delivery-search', [u]);
+    }
+    return;
+  }
+
+  // 7. 実績集計・データ管理タブ（常時購読不要）
 }
 
 function resync(){
   const B = S.B; S.raw.clear(); S.pendingCreate.clear(); B.setLists([]); S.base.lists.clear();
   S.reportClosedLists.clear(); S.reportLoadedSince = null;
   S.reportSummaries.clear(); S.reportSummaryFetched.clear();
+  S.searchEvents.clear(); S.searchEventsSince = null;
   stopTabSubs();
   startLists();
   switchTab(S.activeTab);
@@ -1634,7 +1673,7 @@ function repAffectedMonths(l){
 }
 
 let _reportRangeJob = null;
-async function ensureReportRange(start, end, forceRefresh = false){
+async function ensureReportRange(start, end, forceRefresh = false, listsOnly = false){
   if(!S.store || !S.staff || !start || !end || start > end) return;
   while(_reportRangeJob) await _reportRangeJob;
   if(forceRefresh){
@@ -1642,8 +1681,10 @@ async function ensureReportRange(start, end, forceRefresh = false){
     S.reportLoadedSince = null;
     S.reportSummaries.clear();
     S.reportSummaryFetched.clear();
+    S.searchEvents.clear();
+    S.searchEventsSince = null;
   }
-  const months = repMonthsBetween(start, end);
+  const months = listsOnly ? [] : repMonthsBetween(start, end);
   const missingMonths = months.filter(m => !S.reportSummaryFetched.has(m));
   const fetchStart = repMinusDays(start, 60);
   const tday = today();
@@ -1707,6 +1748,33 @@ async function ensureReportRange(start, end, forceRefresh = false){
     }
   })();
   return _reportRangeJob;
+}
+
+async function ensureDeliverySearchRange(start, end){
+  if(!S.store || !S.staff) return;
+  const tday = today();
+  let s = start, e = end;
+  if(!s && !e){ s = repMinusDays(tday, 90); e = tday; }
+  else if(s && !e){ e = tday >= s ? tday : s; }
+  else if(!s && e){ s = repMinusDays(e, 90); }
+  if(s > e){ const tmp = s; s = e; e = tmp; }
+  await ensureReportRange(s, e, false, true);
+  const cutoff60 = repMinusDays(tday, 60);
+  const evStart = s < cutoff60 ? s : cutoff60;
+  if(!S.searchEventsSince || evStart < S.searchEventsSince){
+    try {
+      const docs = await S.store.colGet('events', { field: 'date', op: '>=', value: evStart });
+      docs.forEach(({ id, data }) => {
+        if(!data || data.deleted){ S.searchEvents.delete(id); return; }
+        const ev = stripEv(data);
+        delete ev.slip; delete ev.sales;
+        S.searchEvents.set(id, ev);
+      });
+      S.searchEventsSince = evStart;
+    } catch(err) {
+      console.warn('ensureDeliverySearchRange events failed:', err);
+    }
+  }
 }
 
 /* ====================================================================
@@ -2234,6 +2302,9 @@ const Sync = {
   exportAll, restore,
   switchTab,
   ensureReportRange,
+  ensureSearchRange: ensureDeliverySearchRange,
+  getClosedLists: () => [...S.reportClosedLists.values()],
+  getSearchEvents: () => [...S.searchEvents.values()],
   getReportClosedLists: () => [...S.reportClosedLists.values()],
   getReportSummaries: () => [...S.reportSummaries.values()],
   isReportLoading: () => S.reportLoading,
