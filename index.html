@@ -207,7 +207,11 @@ body.on-stage main{padding:4px 8px}
 .dl-method-bar .dl-mb-actions{display:inline-flex;gap:4px;align-items:center}
 .dl-method-bar .dl-mb-actions .btn{padding:2px 7px;font-size:11px}
 .dl-method-bar .dl-mb-count{margin-left:auto;font-size:11px;color:#475569;white-space:nowrap}
-#deliveryBoardTable{flex:1 1 100%;min-width:0}
+#deliveryBoardTable{flex:1 1 100%;min-width:0;touch-action:pan-x pan-y}
+.dl-zoom-bar{display:inline-flex;align-items:center;gap:2px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:7px;padding:1px 3px}
+.dl-zoom-bar .btn{padding:2px 7px!important;font-size:11px!important;line-height:1.3;min-width:0}
+#dlZoomResetBtn{min-width:44px;font-variant-numeric:tabular-nums;background:#fff;border:1px solid #cbd5e1}
+.dl-zoom-wrap{min-width:100%}
 #eventDetails>summary{cursor:pointer;font-weight:700;font-size:13px}
 #eventDetails[open]>summary{margin-bottom:8px}
 .dl-table{min-width:0!important;width:100%}
@@ -240,37 +244,7 @@ body.on-stage main{padding:4px 8px}
 .dl-table td.grp-gwt{border-top:2px solid #0f172a;border-right:2px solid #0f172a;border-bottom:2px solid #0f172a}
 .dl-table td.dl-cut{text-align:center}
 .dl-table td.dl-max.dl-max-over{background:#ffedd5;color:#9a3412;font-weight:700}
-@media(max-width:760px){
- .dl-table{display:block}
- .dl-table thead{display:none}
- .dl-table tbody{display:block}
- .dl-table tr.drag-row{display:grid;grid-template-columns:30px 1fr 1fr 1fr 1fr;gap:2px 6px;align-items:center;padding:4px 2px;border-bottom:1px solid #e5eaf0}
- .dl-table tr.drag-row td{padding:0;border:0;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px;max-width:none!important;width:auto!important}
- .dl-table td.dl-mv{grid-column:1;grid-row:1/6}
- .dl-table .dl-moves{flex-direction:column}
- .dl-table .dl-moves .btn{width:28px;height:16px;padding:0;font-size:10px}
- .dl-table td.dl-date{grid-column:2;grid-row:1;font-weight:700}
- .dl-table td.dl-serial{grid-column:3;grid-row:1}
- .dl-table td.dl-max{grid-column:4;grid-row:1;text-align:right}
- .dl-table td.dl-max.dl-max-over{padding:1px 4px;border-radius:4px}
- .dl-table td.dl-wt{grid-column:5;grid-row:1;text-align:right}
- .dl-table td.dl-mfg{grid-column:2/5;grid-row:2;white-space:normal;overflow:visible}
- .dl-table td.dl-mfg .pchips{display:inline-flex;flex-wrap:wrap;margin:0 0 0 4px}
- .dl-table td.dl-qty{grid-column:5;grid-row:2;text-align:right}
- .dl-table td.dl-cust{grid-column:2;grid-row:3;color:#475569}
- .dl-table td.dl-job{grid-column:3/5;grid-row:3;color:#475569}
- .dl-table td.dl-dest{grid-column:5;grid-row:3;color:#475569}
- .dl-table td.dl-slip{grid-column:2;grid-row:4}
- .dl-table td.dl-sales{grid-column:3;grid-row:4}
- .dl-table td.dl-note{grid-column:4/6;grid-row:4}
- .dl-table td.dl-method{grid-column:2/4;grid-row:5;color:#1e40af;font-weight:600}
- .dl-table td.dl-gwt{grid-column:4/6;grid-row:5;text-align:right;background:transparent;padding-top:1px}
- .dl-table td.dl-gwt:empty{display:none}
- .dl-table .dl-cust input,.dl-table .dl-job input,.dl-table .dl-dest input,.dl-table .dl-date input,.dl-table input.dl-ev-date,.dl-table select.dl-ev-method{min-width:0!important;width:100%}
- .dl-table tr.memo-row{display:flex;align-items:center;gap:6px;padding:3px 2px;border-bottom:1px solid #e5eaf0}
- .dl-table tr.memo-row td{flex:1;padding:0}
- .dl-table tr.memo-row td.dl-mv{flex:0 0 auto}
-}
+@media(max-width:760px){#deliveryBoardTable{-webkit-overflow-scrolling:touch}}
 
 /* 配達表の製造状況（略称チップ・色のみ） */
 .dl-table td.dl-mfg .pchip{min-width:20px;text-align:center;padding:0 5px;font-size:11px}
@@ -449,7 +423,6 @@ body.on-stage .arch-toggle span{display:none}
 /* 切断方法 */
 .dl-table td.dl-cut{white-space:nowrap}
 .dl-table .cut-inline{display:none}
-@media(max-width:760px){.dl-table td.dl-cut{display:none}.dl-table .cut-inline{display:inline-block;margin-right:4px;padding:0 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:10.5px;color:#475569}}
 /* 開先：板厚区分 */
 .thk{display:inline-block;padding:0 6px;border-radius:6px;font-size:11px;font-weight:700;margin-right:3px;white-space:nowrap}
 .thk-low{background:#dbeafe;color:#1d4ed8}
@@ -458,8 +431,8 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261124d"></script>
-  <script src="sync.js?v=20261124d"></script>
+  <script src="firebase-config.js?v=20261124f"></script>
+  <script src="sync.js?v=20261124f"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -551,7 +524,7 @@ body.on-stage .arch-toggle span{display:none}
 <div class="panel"><h2>積み込み一覧</h2><div id="loadTable" class="tablewrap"></div></div>
 </section>
 <section id="delivery" class="page">
-<div class="panel" id="deliveryBoardPanel"><h2>配達表</h2><p class="help">通常案件は「備考」「登録番号」「伝票番号」を編集できます（配送イベントは日付・配送方法・各項目・削除が可能）。行の順番・メモは配達表専用で保存されます。</p><div class="stage-toolbar no-print"><button class="btn small" id="addDeliveryMemoBtn">メモ行を追加</button><label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155">日付<input type="date" id="deliveryTitleDate" style="width:auto;padding:3px 6px;font-size:11px"></label><label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155">拠点<select id="deliveryTitleSite" style="width:auto;padding:3px 6px;font-size:11px"><option value="本社">本社</option><option value="亀山">亀山</option></select></label><label class="inline-check" style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155;cursor:pointer"><input type="checkbox" id="deliveryHideLoadedToday" style="width:auto;margin:0"> 今日積込完了も非表示</label><button class="btn small secondary" id="printDeliveryBtn">配達表を印刷</button><button class="btn small teal" id="exportDeliveryXlsxBtn">配達表をエクセル出力</button><span id="deliveryXlsxMsg" class="help"></span><span class="help dl-legend">製造状況：灰＝未開始 青＝開始 緑＝完了（切断・バンドソー・キリ穴・ショット・開先・曲げ）</span></div><div id="deliveryMethodFilterBar" class="dl-method-bar no-print"></div><div id="deliveryBoardTable" class="tablewrap"></div></div>
+<div class="panel" id="deliveryBoardPanel"><h2>配達表</h2><p class="help">通常案件は「備考」「登録番号」「伝票番号」を編集できます（配送イベントは日付・配送方法・各項目・削除が可能）。行の順番・メモは配達表専用で保存されます。</p><div class="stage-toolbar no-print"><button class="btn small" id="addDeliveryMemoBtn">メモ行を追加</button><label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155">日付<input type="date" id="deliveryTitleDate" style="width:auto;padding:3px 6px;font-size:11px"></label><label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155">拠点<select id="deliveryTitleSite" style="width:auto;padding:3px 6px;font-size:11px"><option value="本社">本社</option><option value="亀山">亀山</option></select></label><label class="inline-check" style="display:inline-flex;align-items:center;gap:4px;margin:0;font-size:11px;font-weight:700;color:#334155;cursor:pointer"><input type="checkbox" id="deliveryHideLoadedToday" style="width:auto;margin:0"> 今日積込完了も非表示</label><span class="dl-zoom-bar" title="配達表の拡大・縮小（スマホでは2本指ピンチでも拡大・縮小できます）"><button type="button" class="btn small secondary" id="dlZoomOutBtn" aria-label="縮小">－</button><button type="button" class="btn small secondary" id="dlZoomResetBtn" title="タップで100%に戻す">100%</button><button type="button" class="btn small secondary" id="dlZoomInBtn" aria-label="拡大">＋</button><button type="button" class="btn small secondary" id="dlZoomFitBtn" title="画面幅に全体を合わせる">全体</button></span><button class="btn small secondary" id="printDeliveryBtn">配達表を印刷</button><button class="btn small teal" id="exportDeliveryXlsxBtn">配達表をエクセル出力</button><span id="deliveryXlsxMsg" class="help"></span><span class="help dl-legend">製造状況：灰＝未開始 青＝開始 緑＝完了（切断・バンドソー・キリ穴・ショット・開先・曲げ）</span></div><div id="deliveryMethodFilterBar" class="dl-method-bar no-print"></div><div id="deliveryBoardTable" class="tablewrap"></div></div>
 <details class="panel no-print" id="eventDetails"><summary>配送イベント登録（タップで開く）</summary><p class="help">外注先からの持ち込み、客先への納品などを登録できます。</p><div class="row"><div class="field"><label>日付</label><input id="eventDate" type="date"></div><div class="field"><label>配送方法</label><select id="eventMethod"><option value="">未指定</option><option>配達</option><option>本社引取</option><option>亀山引取</option><option>宅配便</option><option>傭車(宵積み)</option><option>傭車(当日積み)</option><option>外注先から直送</option></select></div><div class="field"><label>需要家</label><input id="eventCustomer" placeholder="需要家"></div></div><div class="row"><div class="field"><label>工事名</label><input id="eventJob" placeholder="工事名"></div><div class="field"><label>訪問先</label><input id="eventDestination" placeholder="訪問先"></div></div><div class="row"><div class="field"><label>登録番号</label><input id="eventSlip" placeholder="登録番号"></div><div class="field"><label>伝票番号</label><input id="eventSales" placeholder="伝票番号"></div></div><div class="row"><div class="field"><label>備考</label><input id="eventNote" placeholder="備考"></div></div><div class="btn-bar"><button class="btn" id="addEventBtn">イベント登録</button></div><div id="eventMsg" class="help"></div></details>
 <div class="panel print-only" style="display:none"><h2>配達表</h2><div id="deliveryPrintTable"></div></div>
 </section>
@@ -1375,6 +1348,96 @@ function visibleDeliveryEntries(){
  const all=deliveryEntries();
  return hideLoadedToday?all.filter(x=>x.memo!==undefined||!x.loadedToday):all;
 }
+const DELIVERY_ZOOM_KEY="factory_link_dl_zoom_v1";
+const SUPPORTS_CSS_ZOOM=!!(window.CSS&&CSS.supports&&CSS.supports("zoom","0.5"));
+let deliveryZoom=1;
+try{const z=parseFloat(localStorage.getItem(DELIVERY_ZOOM_KEY)||"1");if(Number.isFinite(z)&&z>=0.25&&z<=2.5)deliveryZoom=Math.round(z*100)/100;}catch(e){}
+function updateDeliveryZoomUi(){
+ const rst=$("dlZoomResetBtn");if(rst)rst.textContent=Math.round(deliveryZoom*100)+"%";
+}
+function applyDeliveryZoom(){
+ updateDeliveryZoomUi();
+ const wrap=$("deliveryBoardTable");if(!wrap)return;
+ const zWrap=wrap.querySelector(".dl-zoom-wrap");
+ const tbl=wrap.querySelector(".dl-table");
+ if(!tbl)return;
+ if(SUPPORTS_CSS_ZOOM){
+  tbl.style.zoom=deliveryZoom===1?"":String(deliveryZoom);
+  tbl.style.transform="";tbl.style.transformOrigin="";
+  if(zWrap){zWrap.style.width="";zWrap.style.height="";}
+ }else{
+  tbl.style.zoom="";
+  tbl.style.transformOrigin="0 0";
+  tbl.style.transform=deliveryZoom===1?"":`scale(${deliveryZoom})`;
+  if(zWrap){
+   if(deliveryZoom===1){zWrap.style.width="";zWrap.style.height="";}
+   else{zWrap.style.width=Math.ceil(tbl.offsetWidth*deliveryZoom)+"px";zWrap.style.height=Math.ceil(tbl.offsetHeight*deliveryZoom)+"px";}
+  }
+ }
+}
+function setDeliveryZoom(next,persist=true){
+ const clamped=Math.round(Math.max(0.25,Math.min(2.5,Number(next)||1))*100)/100;
+ deliveryZoom=clamped;
+ if(persist){try{localStorage.setItem(DELIVERY_ZOOM_KEY,String(clamped))}catch(e){}}
+ applyDeliveryZoom();
+}
+function fitDeliveryZoom(){
+ const wrap=$("deliveryBoardTable"),tbl=wrap?.querySelector(".dl-table"),zWrap=wrap?.querySelector(".dl-zoom-wrap");
+ if(!wrap||!tbl)return;
+ tbl.style.zoom="";tbl.style.transform="";
+ if(zWrap){zWrap.style.width="";zWrap.style.height="";}
+ const rawW=tbl.scrollWidth||tbl.offsetWidth;
+ const wrapW=wrap.clientWidth;
+ if(rawW>0&&wrapW>0){
+  const fit=rawW<=wrapW?1:Math.max(0.25,Math.floor(((wrapW-2)/rawW)*100)/100);
+  setDeliveryZoom(fit,true);
+ }else{
+  applyDeliveryZoom();
+ }
+}
+$("dlZoomOutBtn")?.addEventListener("click",()=>setDeliveryZoom(deliveryZoom-0.1,true));
+$("dlZoomInBtn")?.addEventListener("click",()=>setDeliveryZoom(deliveryZoom+0.1,true));
+$("dlZoomResetBtn")?.addEventListener("click",()=>setDeliveryZoom(1,true));
+$("dlZoomFitBtn")?.addEventListener("click",fitDeliveryZoom);
+{
+ const wrap=$("deliveryBoardTable");
+ if(wrap){
+  let pinch={active:false,startDist:0,startZoom:1};
+  const distOf=ts=>Math.hypot(ts[0].clientX-ts[1].clientX,ts[0].clientY-ts[1].clientY);
+  const midOf=ts=>({x:(ts[0].clientX+ts[1].clientX)/2,y:(ts[0].clientY+ts[1].clientY)/2});
+  wrap.addEventListener("touchstart",e=>{
+   if(e.touches.length===2){
+    pinch={active:true,startDist:distOf(e.touches),startZoom:deliveryZoom};
+   }
+  },{passive:true});
+  wrap.addEventListener("touchmove",e=>{
+   if(!pinch.active||e.touches.length!==2||!(pinch.startDist>0))return;
+   e.preventDefault();
+   const oldZ=deliveryZoom;
+   const nextZ=Math.max(0.25,Math.min(2.5,pinch.startZoom*(distOf(e.touches)/pinch.startDist)));
+   const rounded=Math.round(nextZ*100)/100;
+   if(rounded===oldZ)return;
+   const rect=wrap.getBoundingClientRect();
+   const m=midOf(e.touches);
+   const lx=m.x-rect.left,ly=m.y-rect.top;
+   const ratio=rounded/oldZ;
+   setDeliveryZoom(rounded,false);
+   wrap.scrollLeft=Math.max(0,(wrap.scrollLeft+lx)*ratio-lx);
+   wrap.scrollTop=Math.max(0,(wrap.scrollTop+ly)*ratio-ly);
+  },{passive:false});
+  const endPinch=e=>{
+   if(pinch.active&&(!e.touches||e.touches.length<2)){
+    pinch.active=false;
+    try{localStorage.setItem(DELIVERY_ZOOM_KEY,String(deliveryZoom))}catch(err){}
+   }
+  };
+  wrap.addEventListener("touchend",endPinch,{passive:true});
+  wrap.addEventListener("touchcancel",endPinch,{passive:true});
+  wrap.addEventListener("gesturestart",e=>e.preventDefault(),{passive:false});
+  wrap.addEventListener("gesturechange",e=>e.preventDefault(),{passive:false});
+ }
+}
+updateDeliveryZoomUi();
 function setAllDeliveryMethodFilters(selectAll){
  const opts=allDeliveryMethodOptions(visibleDeliveryEntries());
  if(selectAll)deliveryMethodExcluded.clear();else deliveryMethodExcluded=new Set(opts);
@@ -1408,7 +1471,7 @@ function editDeliveryField(key,field,value){let prefix=key.slice(0,2),id=key.sli
 function cutShortLabel(cut){const s=String(cut||"").trim();if(!s||s==="未指定"||s==="－")return"－";const m={"ガス":"ガ","プラズマ":"プ","レーザー":"レ","シャーリング":"シ","外注":"外"};return m[s]||s.slice(0,1)}
 function deliveryGroupKey(x){if(!x||x.memo!==undefined||x.type!=="list")return"";const d=String(x.date||"").trim(),{base,sub}=normalizeDestParts(x.destination);return(!d||!base)?"":d+"\u0001"+base+"\u0001"+sub}
 function deliveryGroupRuns(entries){const startMap=new Map(),skipSet=new Set(),rowMeta=new Map();let i=0;while(i<entries.length){const k=deliveryGroupKey(entries[i]);if(!k){i++;continue}let j=i+1,sumW=num(entries[i].weight);while(j<entries.length&&deliveryGroupKey(entries[j])===k){sumW+=num(entries[j].weight);j++}const len=j-i;if(len>=2){const grp={len,sumW:Math.round(sumW*10)/10,startIdx:i,endIdx:j-1};startMap.set(i,grp);for(let p=i;p<j;p++){rowMeta.set(p,{...grp,isTop:p===i,isBot:p===j-1});if(p>i)skipSet.add(p)}}i=j}return{startMap,skipSet,rowMeta}}
-function renderDeliveryBoard(){refreshEventSelect();const allEntries=visibleDeliveryEntries();const entries=filterDeliveryByMethod(allEntries);renderDeliveryMethodFilterBar(allEntries,entries);const {startMap,skipSet,rowMeta}=deliveryGroupRuns(entries);const mvb=i=>`<span class="dl-moves"><button type="button" class="btn small secondary" onclick="moveDelivery(${Number(i)||0},-1)">↑</button><button type="button" class="btn small secondary" onclick="moveDelivery(${Number(i)||0},1)">↓</button></span>`;let dlNo=0;let html=entries.map((x,i)=>{const bIdx=Number(x._boardIndex??i)||0;if(x.memo!==undefined)return `<tr class="memo-row" draggable="true" ondragstart="deliveryDragStart(event,${bIdx})" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${bIdx})"><td class="dl-mv">${mvb(bIdx)}</td><td colspan="15"><div class="memo-flex"><b>メモ</b><input value="${esc(x.memo)}" data-dl-memo-input="1" data-dl-key="${esc(x.key)}"><button type="button" class="btn small secondary" style="color:#b91c1c" data-dl-action="delete-memo" data-dl-key="${esc(x.key)}">削除</button></div></td></tr>`;let k=x.key;const isList=x.type==="list";const tt=v=>`title="${esc(v||"")}"`;const maxs=String(x.maxSize||"－").replace(/^最大サイズ\s*/,"").replace(/\s*mm$/i,"");const cutInit=isList?cutShortLabel(x.cut):"－";const grp=startMap.get(i),rm=rowMeta.get(i);const tbCls=rm?`${rm.isTop?" grp-top":""}${rm.isBot?" grp-bot":""}`:"";const destCls=rm?` grp-left${tbCls}`:"";const gwtCell=skipSet.has(i)?"":(grp?`<td class="dl-gwt grp-gwt" rowspan="${grp.len}">${fmt(grp.sumW)} kg</td>`:`<td class="dl-gwt"></td>`);const evOpts=DELIVERY_METHODS_ORDER.filter(m=>m!=="");if(x.method&&!evOpts.includes(x.method))evOpts.push(x.method);const methodCellHtml=isList?esc(x.method||"－"):`<select class="dl-ev-method" data-dl-field="method" data-dl-key="${esc(k)}"><option value="" ${!x.method?"selected":""}>未指定</option>${evOpts.map(m=>`<option value="${esc(m)}" ${x.method===m?"selected":""}>${esc(m)}</option>`).join("")}</select>`;return `<tr class="drag-row" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${bIdx})"><td class="dl-mv dl-no">${++dlNo}</td><td class="dl-date">${isList?esc(x.dateLabel||x.date||""):`<input type="date" class="dl-ev-date" value="${esc(x.date||"")}" title="日付を変更" data-dl-field="date" data-dl-key="${esc(k)}">`}</td><td class="dl-method" ${isList?tt(x.method||""):""}>${methodCellHtml}</td><td class="dl-serial">${isList?`<span class="badge">${esc(x.serial)}</span>`:`<span class="badge blue" title="配送イベント ${esc(x.event.id)}">イベント</span>${x.event.serial?` <span class="help">工程番号 ${esc(x.event.serial)}</span>`:""}`}</td><td class="dl-cust" ${isList?tt(x.customer):""}>${isList?esc(x.customer):`<input value="${esc(x.customer)}" placeholder="需要家" data-dl-field="customer" data-dl-key="${esc(k)}">`}</td><td class="dl-job" ${isList?tt(x.job):""}>${isList?esc(x.job):`<input value="${esc(x.job)}" placeholder="工事名" data-dl-field="job" data-dl-key="${esc(k)}">`}</td><td class="dl-dest${destCls}" ${isList?tt(x.destination):""}>${isList?esc(x.destination):`<input value="${esc(x.destination)}" placeholder="訪問先" data-dl-field="destination" data-dl-key="${esc(k)}">`}</td><td class="dl-qty${tbCls}">${isList?fmt(x.qty)+" 枚":"－"}</td><td class="dl-wt${tbCls}">${isList?fmt(x.weight)+" kg":"－"}</td>${gwtCell}<td class="dl-max${isList&&x.maxSizeOver?" dl-max-over":""}">${esc(maxs)}</td><td class="dl-slip"><input value="${esc(x.slip)}" placeholder="登録番号" data-dl-field="slip" data-dl-key="${esc(k)}"></td><td class="dl-sales"><input value="${esc(x.sales)}" placeholder="伝票番号" data-dl-field="sales" data-dl-key="${esc(k)}"></td><td class="dl-note"><input value="${esc(x.note)}" placeholder="備考" data-dl-field="note" data-dl-key="${esc(k)}"></td><td class="dl-cut" ${isList?tt(x.cut):""}>${esc(cutInit)}</td><td class="dl-mfg">${isList?`<span class="cut-inline">${esc(cutInit)}</span>`+(x.mfg||"－"):`<button type="button" class="btn small secondary" style="color:#b91c1c;padding:1px 7px;font-size:10.5px" data-dl-action="delete-event" data-dl-key="${esc(k)}">削除</button>`}</td></tr>`}).join("");$("deliveryBoardTable").innerHTML=html?`<table class="dl-table"><thead><tr><th>No.</th><th>納期</th><th>配送方法</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先</th><th>枚数</th><th>角重量</th><th>合計重量</th><th>最大サイズ</th><th>登録番号</th><th>伝票番号</th><th>備考</th><th>切断</th><th>製造状況</th></tr></thead><tbody>${html}</tbody></table>`:`<div class="empty">${allEntries.length?"選択した配送方法に一致する配送データはありません":"配送データがありません"}</div>`}
+function renderDeliveryBoard(){refreshEventSelect();const allEntries=visibleDeliveryEntries();const entries=filterDeliveryByMethod(allEntries);renderDeliveryMethodFilterBar(allEntries,entries);const {startMap,skipSet,rowMeta}=deliveryGroupRuns(entries);const mvb=i=>`<span class="dl-moves"><button type="button" class="btn small secondary" onclick="moveDelivery(${Number(i)||0},-1)">↑</button><button type="button" class="btn small secondary" onclick="moveDelivery(${Number(i)||0},1)">↓</button></span>`;let dlNo=0;let html=entries.map((x,i)=>{const bIdx=Number(x._boardIndex??i)||0;if(x.memo!==undefined)return `<tr class="memo-row" draggable="true" ondragstart="deliveryDragStart(event,${bIdx})" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${bIdx})"><td class="dl-mv">${mvb(bIdx)}</td><td colspan="15"><div class="memo-flex"><b>メモ</b><input value="${esc(x.memo)}" data-dl-memo-input="1" data-dl-key="${esc(x.key)}"><button type="button" class="btn small secondary" style="color:#b91c1c" data-dl-action="delete-memo" data-dl-key="${esc(x.key)}">削除</button></div></td></tr>`;let k=x.key;const isList=x.type==="list";const tt=v=>`title="${esc(v||"")}"`;const maxs=String(x.maxSize||"－").replace(/^最大サイズ\s*/,"").replace(/\s*mm$/i,"");const cutInit=isList?cutShortLabel(x.cut):"－";const grp=startMap.get(i),rm=rowMeta.get(i);const tbCls=rm?`${rm.isTop?" grp-top":""}${rm.isBot?" grp-bot":""}`:"";const destCls=rm?` grp-left${tbCls}`:"";const gwtCell=skipSet.has(i)?"":(grp?`<td class="dl-gwt grp-gwt" rowspan="${grp.len}">${fmt(grp.sumW)} kg</td>`:`<td class="dl-gwt"></td>`);const evOpts=DELIVERY_METHODS_ORDER.filter(m=>m!=="");if(x.method&&!evOpts.includes(x.method))evOpts.push(x.method);const methodCellHtml=isList?esc(x.method||"－"):`<select class="dl-ev-method" data-dl-field="method" data-dl-key="${esc(k)}"><option value="" ${!x.method?"selected":""}>未指定</option>${evOpts.map(m=>`<option value="${esc(m)}" ${x.method===m?"selected":""}>${esc(m)}</option>`).join("")}</select>`;return `<tr class="drag-row" ondragover="event.preventDefault()" ondrop="deliveryDrop(event,${bIdx})"><td class="dl-mv dl-no">${++dlNo}</td><td class="dl-date">${isList?esc(x.dateLabel||x.date||""):`<input type="date" class="dl-ev-date" value="${esc(x.date||"")}" title="日付を変更" data-dl-field="date" data-dl-key="${esc(k)}">`}</td><td class="dl-method" ${isList?tt(x.method||""):""}>${methodCellHtml}</td><td class="dl-serial">${isList?`<span class="badge">${esc(x.serial)}</span>`:`<span class="badge blue" title="配送イベント ${esc(x.event.id)}">イベント</span>${x.event.serial?` <span class="help">工程番号 ${esc(x.event.serial)}</span>`:""}`}</td><td class="dl-cust" ${isList?tt(x.customer):""}>${isList?esc(x.customer):`<input value="${esc(x.customer)}" placeholder="需要家" data-dl-field="customer" data-dl-key="${esc(k)}">`}</td><td class="dl-job" ${isList?tt(x.job):""}>${isList?esc(x.job):`<input value="${esc(x.job)}" placeholder="工事名" data-dl-field="job" data-dl-key="${esc(k)}">`}</td><td class="dl-dest${destCls}" ${isList?tt(x.destination):""}>${isList?esc(x.destination):`<input value="${esc(x.destination)}" placeholder="訪問先" data-dl-field="destination" data-dl-key="${esc(k)}">`}</td><td class="dl-qty${tbCls}">${isList?fmt(x.qty)+" 枚":"－"}</td><td class="dl-wt${tbCls}">${isList?fmt(x.weight)+" kg":"－"}</td>${gwtCell}<td class="dl-max${isList&&x.maxSizeOver?" dl-max-over":""}">${esc(maxs)}</td><td class="dl-slip"><input value="${esc(x.slip)}" placeholder="登録番号" data-dl-field="slip" data-dl-key="${esc(k)}"></td><td class="dl-sales"><input value="${esc(x.sales)}" placeholder="伝票番号" data-dl-field="sales" data-dl-key="${esc(k)}"></td><td class="dl-note"><input value="${esc(x.note)}" placeholder="備考" data-dl-field="note" data-dl-key="${esc(k)}"></td><td class="dl-cut" ${isList?tt(x.cut):""}>${esc(cutInit)}</td><td class="dl-mfg">${isList?`<span class="cut-inline">${esc(cutInit)}</span>`+(x.mfg||"－"):`<button type="button" class="btn small secondary" style="color:#b91c1c;padding:1px 7px;font-size:10.5px" data-dl-action="delete-event" data-dl-key="${esc(k)}">削除</button>`}</td></tr>`}).join("");$("deliveryBoardTable").innerHTML=html?`<div class="dl-zoom-wrap"><table class="dl-table"><thead><tr><th>No.</th><th>納期</th><th>配送方法</th><th>工程番号</th><th>需要家</th><th>工事名</th><th>納入先</th><th>枚数</th><th>角重量</th><th>合計重量</th><th>最大サイズ</th><th>登録番号</th><th>伝票番号</th><th>備考</th><th>切断</th><th>製造状況</th></tr></thead><tbody>${html}</tbody></table></div>`:`<div class="empty">${allEntries.length?"選択した配送方法に一致する配送データはありません":"配送データがありません"}</div>`;applyDeliveryZoom();}
 $("deliveryBoardTable")?.addEventListener("click",e=>{const btn=e.target?.closest?.("button[data-dl-action]");if(!btn)return;if(btn.dataset.dlAction==="delete-memo")deleteDeliveryMemo(btn.dataset.dlKey);else if(btn.dataset.dlAction==="delete-event")deleteDeliveryEvent(btn.dataset.dlKey)});
 $("deliveryBoardTable")?.addEventListener("change",e=>{const t=e.target;if(!t||!t.dataset)return;if(t.dataset.dlMemoInput)updateDeliveryMemo(t.dataset.dlKey,t.value);else if(t.dataset.dlField)editDeliveryField(t.dataset.dlKey,t.dataset.dlField,t.value)});
 let draggedDeliveryIndex=null;function deliveryDragStart(e,index){draggedDeliveryIndex=index;e.dataTransfer.effectAllowed="move"}function deliveryDrop(e,index){e.preventDefault();if(draggedDeliveryIndex===null||draggedDeliveryIndex===index)return;const [item]=deliveryBoard.splice(draggedDeliveryIndex,1);deliveryBoard.splice(index,0,item);draggedDeliveryIndex=null;persistDelivery();renderDeliveryBoard()}
