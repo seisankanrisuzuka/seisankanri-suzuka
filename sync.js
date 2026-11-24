@@ -299,7 +299,10 @@ function listToDoc(l){
   d.pileItems = Array.isArray(l.pileItems) ? clone(l.pileItems) : [];
   d.loads = Array.isArray(l.loads) ? clone(l.loads) : [];
   const procs = Array.isArray(l.processes) ? l.processes : [];
-  const procsDone = procs.length > 0 && procs.every(p => (l.processStatus && l.processStatus[p] === 'done') || (l.processCompleted && l.processCompleted[p]));
+  const procsDone = procs.length > 0 && procs.every(p => {
+    const st = l.processStatus && l.processStatus[p];
+    return st ? st === 'done' : !!(l.processCompleted && l.processCompleted[p]);
+  });
   const loadDay = (S.B && S.B.loadCompleteDay) ? S.B.loadCompleteDay(l) : null;
   const doneMaxDay = (l.processDoneDates && Object.values(l.processDoneDates).filter(Boolean).sort().pop()) || '';
   d.isOpen = !(l.delivered === true || (loadDay !== null && (procs.length === 0 || procsDone)));
@@ -646,7 +649,7 @@ function pushDelivery(stageOnly){ return chain(S.q, 'delivery', async () => {
   const boards = [{ key: 'delivery', arr: B.getDeliveryBoard() }, ...Object.entries(B.getStageBoard() || {}).map(([key, arr]) => ({ key, arr }))];
   for(const bd of boards){
     if(stageOnly && bd.key === 'delivery') continue;
-    const bm = boardMeta(bd.key); if(!bm) continue;
+    const bm = boardMeta(bd.key); if(!bm || !isSafeDocId(bm.id)) continue;
     if(!isAdmin && !Policy.hasTab(S.staff, bm.tab)) continue;
     if(!S.base.boards.has(bm.id) && (!S.activeTab || bm.tab !== S.activeTab)) continue;
     const memos = boardDocFrom(bd.key, bd.arr);
@@ -768,6 +771,7 @@ function ingestLists(union){
     const ls = docToList(server);
     ls.version = sd.version || 1;
     B.normalize && B.normalize(ls);
+    B.ensure && B.ensure(ls);
     const baseDoc = listToDoc(ls);
     baseDoc.version = sd.version || 1;
     S.base.lists.set(id, baseDoc);
@@ -1406,6 +1410,8 @@ async function addStaffRecord(){
   try {
     const initialTabs = role === 'admin' ? TAB_IDS : [];
     await S.store.runTx(async tx => {
+      const ex = await tx.get('staff', uid);
+      if(ex) throw new Error('このUIDは既に登録されています');
       tx.set('staff', uid, {
         staffId: id,
         name,
@@ -1630,6 +1636,7 @@ function repAffectedMonths(l){
 let _reportRangeJob = null;
 async function ensureReportRange(start, end, forceRefresh = false){
   if(!S.store || !S.staff || !start || !end || start > end) return;
+  while(_reportRangeJob) await _reportRangeJob;
   if(forceRefresh){
     S.reportClosedLists.clear();
     S.reportLoadedSince = null;
@@ -1642,7 +1649,6 @@ async function ensureReportRange(start, end, forceRefresh = false){
   const tday = today();
   const needLists = !S.reportLoadedSince || fetchStart < S.reportLoadedSince;
   if(!missingMonths.length && !needLists) return;
-  if(_reportRangeJob) return _reportRangeJob;
 
   S.reportLoading = true;
   {
@@ -2034,9 +2040,9 @@ async function restore(data){
           if(info) doc.deliveryInfo = { slip: info.slip || '', sales: info.sales || '' };
           const nv = (pre[k] && pre[k].version || 0) + 1;
           tx.set('lists', id, { ...doc, deleted: false, version: nv, createdBy: (pre[k] && pre[k].createdBy) || S.uid, updatedAt: TS, updatedBy: S.uid });
-          restoredLists++;
         });
       });
+      restoredLists += chunk.length;
     }
 
     for(const e of evs){
@@ -2061,6 +2067,36 @@ async function restore(data){
       });
     }
 
+    const boardEntries = [];
+    if(Array.isArray(data.deliveryBoard)){
+      boardEntries.push({ key: 'delivery', arr: data.deliveryBoard });
+    }
+    if(isObj(data.stageBoard)){
+      for(const [key, arr] of Object.entries(data.stageBoard)){
+        if(Array.isArray(arr)) boardEntries.push({ key, arr });
+      }
+    }
+    for(const bd of boardEntries){
+      const bm = boardMeta(bd.key);
+      if(!bm || !isSafeDocId(bm.id)) continue;
+      const memos = boardDocFrom(bd.key, bd.arr);
+      await st.runTx(async tx => {
+        const pre = await tx.get('boards', bm.id);
+        if(!pre && !Object.keys(memos).length) return;
+        const nv = ((pre && pre.version) || 0) + 1;
+        if(!pre){
+          tx.set('boards', bm.id, { tab: bm.tab, key: bd.key, memos, deleted: false, version: 1, createdBy: S.uid, updatedAt: TS, updatedBy: S.uid });
+        } else {
+          tx.update('boards', bm.id, [
+            { p: ['memos'], v: memos },
+            { p: ['version'], v: nv },
+            { p: ['updatedAt'], v: TS },
+            { p: ['updatedBy'], v: S.uid }
+          ]);
+        }
+      });
+    }
+
     if(cutSpeeds.length){
       const cleanSpeeds = cutSpeeds.map(x => ({ t: x && x.t, v: x && x.v }));
       await st.runTx(async tx => {
@@ -2071,11 +2107,12 @@ async function restore(data){
     }
 
     const mx = validLists.reduce((a, l) => { const m = /^S(\d{5})$/.exec(String(l.serial)); return m ? Math.max(a, +m[1]) : a; }, 0);
-    if(mx){
+    const targetCounter = Math.min(99999, Math.max(mx, parseInt(data.serialCounter, 10) || 0));
+    if(targetCounter > 0){
       await st.runTx(async tx => {
         const c = await tx.get('counters', 'serial');
-        if(!c) tx.set('counters', 'serial', { last: mx });
-        else if(c.last < mx) tx.update('counters', 'serial', [{ p: ['last'], v: mx }]);
+        if(!c) tx.set('counters', 'serial', { last: targetCounter });
+        else if(c.last < targetCounter) tx.update('counters', 'serial', [{ p: ['last'], v: targetCounter }]);
       });
     }
 
