@@ -453,8 +453,8 @@ body.on-stage .arch-toggle span{display:none}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
 </style>
-  <script src="firebase-config.js?v=20261123d"></script>
-  <script src="sync.js?v=20261123d"></script>
+  <script src="firebase-config.js?v=20261123g"></script>
+  <script src="sync.js?v=20261123g"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -1448,8 +1448,8 @@ function exportDeliveryExcel(){
  const headers=["納期","配送方法","工程番号","需要家","工事名","納入先","枚数","角重量","合計重量","最大サイズ","登録番号","伝票番号","備考","切断","工程"];
  const colWidths=[8.0,10.5,8.2,12.5,21.5,15.5,7.8,10.0,10.6,10.5,8.8,8.8,20.0,4.6,11.5];
  const rows=[
-  {r:1,ht:20,cells:[{c:1,t:"s",v:title,st:14}]},
-  {r:2,ht:13,cells:[{c:1,t:"s",v:`出力日：${today.replace(/-/g,"/")}　／　件数：${entries.length}件${methodLabel?`　／　配送方法：${methodLabel}`:""}`,st:15}]},
+  {r:1,ht:20,cells:headers.map((_,i)=>i===0?{c:1,t:"s",v:title,st:14}:{c:i+1,t:"b",st:14})},
+  {r:2,ht:13,cells:headers.map((_,i)=>i===0?{c:1,t:"s",v:`出力日：${today.replace(/-/g,"/")}　／　件数：${entries.length}件${methodLabel?`　／　配送方法：${methodLabel}`:""}`,st:15}:{c:i+1,t:"b",st:15})},
   {r:3,ht:16,cells:headers.map((h,i)=>({c:i+1,t:"s",v:h,st:(i===6||i===7||i===8)?17:16}))}
  ];
  const merges=["A1:O1","A2:O2"];
@@ -2180,10 +2180,10 @@ function xlsxBuildZip(entries){
  return out;
 }
 function xlsxEsc(s){
- return String(s??"").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+ return String(s??"").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g,"").replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/g,m=>m.length>1?m[0]:"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
 }
 function xlsxSafeSheetName(raw,used){
- let base=String(raw||"Sheet").replace(/[:\\/?*\[\]]/g,"_").trim()||"Sheet";
+ let base=String(raw||"Sheet").replace(/[:\\/?*\[\]]/g,"_").replace(/^'+|'+$/g,"").trim()||"Sheet";
  if(base.length>31)base=base.slice(0,31);
  let name=base,n=2;
  while(used.has(name)){
@@ -2298,16 +2298,16 @@ function xlsxDownloadBytes(bytes,filename){
  const a=document.createElement("a");
  a.href=URL.createObjectURL(blob);
  a.download=filename;
+ a.style.display="none";
  document.body.appendChild(a);a.click();
- setTimeout(()=>{a.remove();URL.revokeObjectURL(a.href)},1500);
+ setTimeout(()=>{a.remove();URL.revokeObjectURL(a.href)},5000);
+}
+function xlsxInlineCell(ref,st,val){
+ const s=String(val??"");
+ return `<c r="${ref}" s="${st}" t="inlineStr"><is><t${/^\s|\s$|[\r\n\t]/.test(s)?' xml:space="preserve"':''}>${xlsxEsc(s)}</t></is></c>`;
 }
 function xlsxBuildTableWorkbook(sheets){
- const strings=[],strMap=new Map();
- const strIdx=s=>{
-  const v=String(s??"");
-  if(strMap.has(v))return strMap.get(v);
-  const idx=strings.length;strings.push(v);strMap.set(v,idx);return idx;
- };
+ const safeNum=v=>{const n=Number(v);return Number.isFinite(n)?n:0;};
  const files=[],ctOverrides=[],wbSheets=[],wbRels=[];
  const usedNames=new Set();
 
@@ -2320,9 +2320,9 @@ function xlsxBuildTableWorkbook(sheets){
   const rowsXml=sh.rows.map(row=>{
    const cellsXml=row.cells.slice().sort((a,b)=>a.c-b.c).map(cell=>{
     const ref=xlsxColName(cell.c)+row.r;
-    if(cell.t==="s")return `<c r="${ref}" s="${cell.st}" t="s"><v>${strIdx(cell.v)}</v></c>`;
-    if(cell.t==="n")return `<c r="${ref}" s="${cell.st}"><v>${Number(cell.v)||0}</v></c>`;
-    if(cell.t==="f")return `<c r="${ref}" s="${cell.st}"><f>${xlsxEsc(cell.f)}</f><v>${Number(cell.v)||0}</v></c>`;
+    if(cell.t==="s")return xlsxInlineCell(ref,cell.st,cell.v);
+    if(cell.t==="n")return `<c r="${ref}" s="${cell.st}"><v>${safeNum(cell.v)}</v></c>`;
+    if(cell.t==="f")return `<c r="${ref}" s="${cell.st}"><f>${xlsxEsc(cell.f)}</f><v>${safeNum(cell.v)}</v></c>`;
     return `<c r="${ref}" s="${cell.st}"/>`;
    }).join("");
    return `<row r="${row.r}" ht="${row.ht||18}" customHeight="1">${cellsXml}</row>`;
@@ -2353,21 +2353,19 @@ ${pageSetupXml}
   wbRels.push(`<Relationship Id="rId${idx}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${idx}.xml"/>`);
  });
 
- const stRelId=sheets.length+1,ssRelId=sheets.length+2;
+ const stRelId=sheets.length+1;
  wbRels.push(`<Relationship Id="rId${stRelId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`);
- wbRels.push(`<Relationship Id="rId${ssRelId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>`);
 
  const contentTypesXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/content-types">
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
 <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
 <Default Extension="xml" ContentType="application/xml"/>
 <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
 <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
 ${ctOverrides.join("")}
 </Types>`;
  const rootRelsXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/relationships">
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
 </Relationships>`;
  const workbookXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -2376,34 +2374,24 @@ ${ctOverrides.join("")}
 <sheets>${wbSheets.join("")}</sheets>
 </workbook>`;
  const wbRelsXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/relationships">
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 ${wbRels.join("")}
 </Relationships>`;
- const ssXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${strings.length}" uniqueCount="${strings.length}">
-${strings.map(s=>`<si><t${/^\s|\s$/.test(s)?' xml:space="preserve"':''}>${xlsxEsc(s)}</t></si>`).join("")}
-</sst>`;
 
- files.push(
+ return xlsxBuildZip([
   {name:"[Content_Types].xml",data:contentTypesXml},
   {name:"_rels/.rels",data:rootRelsXml},
   {name:"xl/workbook.xml",data:workbookXml},
   {name:"xl/_rels/workbook.xml.rels",data:wbRelsXml},
   {name:"xl/styles.xml",data:xlsxStylesXml()},
-  {name:"xl/sharedStrings.xml",data:ssXml}
- );
- return xlsxBuildZip(files);
+  ...files
+ ]);
 }
 function xlsxBuildComboWorkbook(sheets){
- const strings=[],strMap=new Map();
- const strIdx=s=>{
-  const v=String(s??"");
-  if(strMap.has(v))return strMap.get(v);
-  const idx=strings.length;strings.push(v);strMap.set(v,idx);return idx;
- };
- const sCell=(ref,val,st)=>`<c r="${ref}" s="${st}" t="s"><v>${strIdx(val)}</v></c>`;
- const nCell=(ref,val,st)=>`<c r="${ref}" s="${st}"><v>${Number(val)||0}</v></c>`;
- const fCell=(ref,formula,cached,st)=>`<c r="${ref}" s="${st}"><f>${xlsxEsc(formula)}</f><v>${Number(cached)||0}</v></c>`;
+ const safeNum=v=>{const n=Number(v);return Number.isFinite(n)?n:0;};
+ const sCell=(ref,val,st)=>xlsxInlineCell(ref,st,val);
+ const nCell=(ref,val,st)=>`<c r="${ref}" s="${st}"><v>${safeNum(val)}</v></c>`;
+ const fCell=(ref,formula,cached,st)=>`<c r="${ref}" s="${st}"><f>${xlsxEsc(formula)}</f><v>${safeNum(cached)}</v></c>`;
  const files=[],ctOverrides=[],wbSheets=[],wbRels=[];
  const usedNames=new Set();
 
@@ -2464,7 +2452,7 @@ function xlsxBuildComboWorkbook(sheets){
 </worksheet>`;
 
   const sheetRelsXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/relationships">
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing${idx}.xml"/>
 </Relationships>`;
 
@@ -2483,13 +2471,13 @@ function xlsxBuildComboWorkbook(sheets){
 </xdr:wsDr>`;
 
   const drawingRelsXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/relationships">
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart${idx}.xml"/>
 </Relationships>`;
 
   const catCache=`<c:strCache><c:ptCount val="${sh.pts.length}"/>${sh.pts.map((p,pi)=>`<c:pt idx="${pi}"><c:v>${xlsxEsc(p.label)}</c:v></c:pt>`).join("")}</c:strCache>`;
-  const wCache=`<c:numCache><c:formatCode>#,##0.0</c:formatCode><c:ptCount val="${sh.pts.length}"/>${sh.pts.map((p,pi)=>`<c:pt idx="${pi}"><c:v>${p.w}</c:v></c:pt>`).join("")}</c:numCache>`;
-  const qCache=`<c:numCache><c:formatCode>#,##0</c:formatCode><c:ptCount val="${sh.pts.length}"/>${sh.pts.map((p,pi)=>`<c:pt idx="${pi}"><c:v>${p.qty}</c:v></c:pt>`).join("")}</c:numCache>`;
+  const wCache=`<c:numCache><c:formatCode>#,##0.0</c:formatCode><c:ptCount val="${sh.pts.length}"/>${sh.pts.map((p,pi)=>`<c:pt idx="${pi}"><c:v>${safeNum(p.w)}</c:v></c:pt>`).join("")}</c:numCache>`;
+  const qCache=`<c:numCache><c:formatCode>#,##0</c:formatCode><c:ptCount val="${sh.pts.length}"/>${sh.pts.map((p,pi)=>`<c:pt idx="${pi}"><c:v>${safeNum(p.qty)}</c:v></c:pt>`).join("")}</c:numCache>`;
   const catRef=`${qSheet}!$B$${hdrRow}:$${endColLet}$${hdrRow}`;
   const wRef=`${qSheet}!$B$${wRow}:$${endColLet}$${wRow}`,wTitleRef=`${qSheet}!$A$${wRow}`;
   const qRef=`${qSheet}!$B$${qtyRow}:$${endColLet}$${qtyRow}`,qTitleRef=`${qSheet}!$A$${qtyRow}`;
@@ -2550,22 +2538,20 @@ function xlsxBuildComboWorkbook(sheets){
   wbRels.push(`<Relationship Id="rId${idx}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${idx}.xml"/>`);
  });
 
- const stRelId=sheets.length+1,ssRelId=sheets.length+2;
+ const stRelId=sheets.length+1;
  wbRels.push(`<Relationship Id="rId${stRelId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`);
- wbRels.push(`<Relationship Id="rId${ssRelId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>`);
 
  const contentTypesXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/content-types">
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
 <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
 <Default Extension="xml" ContentType="application/xml"/>
 <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
 <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
 ${ctOverrides.join("")}
 </Types>`;
 
  const rootRelsXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/relationships">
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
 </Relationships>`;
 
@@ -2576,26 +2562,18 @@ ${ctOverrides.join("")}
 </workbook>`;
 
  const wbRelsXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/relationships">
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 ${wbRels.join("")}
 </Relationships>`;
 
- const stylesXml=xlsxStylesXml();
-
- const ssXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${strings.length}" uniqueCount="${strings.length}">
-${strings.map(s=>`<si><t${/^\s|\s$/.test(s)?' xml:space="preserve"':''}>${xlsxEsc(s)}</t></si>`).join("")}
-</sst>`;
-
- files.push(
+ return xlsxBuildZip([
   {name:"[Content_Types].xml",data:contentTypesXml},
   {name:"_rels/.rels",data:rootRelsXml},
   {name:"xl/workbook.xml",data:workbookXml},
   {name:"xl/_rels/workbook.xml.rels",data:wbRelsXml},
-  {name:"xl/styles.xml",data:stylesXml},
-  {name:"xl/sharedStrings.xml",data:ssXml}
- );
- return xlsxBuildZip(files);
+  {name:"xl/styles.xml",data:xlsxStylesXml()},
+  ...files
+ ]);
 }
 async function exportReportExcel(mode){
  const msgEl=$("reportXlsxMsg"),btnD=$("reportXlsxDayBtn"),btnM=$("reportXlsxMonthBtn");
@@ -2635,12 +2613,7 @@ async function exportReportExcel(mode){
  const itemLabel=(procSel&&procSel.selectedOptions&&procSel.selectedOptions[0])?procSel.selectedOptions[0].textContent:"すべて";
  const slug=(procFilter?procFilter.replace("|","-"):"all").replace(/[\\/:*?"<>|\s]+/g,"_");
  const unitSlug=mode==="month"?"monthly":"daily";
- const blob=new Blob([xlsxBytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
- const a=document.createElement("a");
- a.href=URL.createObjectURL(blob);
- a.download=`nippo_${slug}_${unitSlug}_${start}_${end}.xlsx`;
- document.body.appendChild(a);a.click();
- setTimeout(()=>{a.remove();URL.revokeObjectURL(a.href)},1500);
+ xlsxDownloadBytes(xlsxBytes,`nippo_${slug}_${unitSlug}_${start}_${end}.xlsx`);
  if(msgEl)msgEl.textContent=`「${itemLabel}」の${modeLabel}エクセルを出力しました（${sheets.length}シート：グラフ＋集計表）。`;
 }
 function setReportChartMode(m){
