@@ -157,6 +157,10 @@ const Policy = {
     if (col === 'auditLogs') {
       return kind === 'create' ? null : (kind === 'delete' && Policy.admin(s) ? null : '操作履歴の改ざんはできません');
     }
+    if (col === 'listEditLogs') {
+      if (kind === 'create') return (Policy.admin(s) || Policy.hasTab(s, 'register')) ? null : '修正履歴の記録権限がありません';
+      return (kind === 'delete' && Policy.admin(s)) ? null : '修正履歴の改ざんはできません';
+    }
     return '管理者のみ操作できます';
   }
 };
@@ -281,7 +285,10 @@ const S = {
   reportLoading: false,
   reportRulesWarn: false,
   searchEvents: new Map(),
-  searchEventsSince: null
+  searchEventsSince: null,
+  listEditLogs: new Map(),
+  listEditLogsSince: null,
+  listEditLogsRulesWarn: false
 };
 
 const idToEmail = id => id.includes('@') ? id : `${id}@${CFG.idDomain || 'seisankanri-suzuka-aa08c.firebaseapp.com'}`;
@@ -858,6 +865,106 @@ function ingestBoards(docs){
   B.setStageBoard(stage); B.setDeliveryBoard(dboard); B.renderSoon();
 }
 
+function normalizeEditLog(id, data){
+  const atIso = data && data.at ? String(data.at) : new Date().toISOString();
+  const ms = Date.parse(atIso);
+  return {
+    id: String(id),
+    at: atIso,
+    atMs: Number.isFinite(ms) ? ms : Date.now(),
+    by: String((data && data.by) || ''),
+    byId: String((data && data.byId) || ''),
+    byName: String((data && data.byName) || (data && data.byId) || ''),
+    serial: String((data && data.serial) || ''),
+    customer: String((data && data.customer) || ''),
+    job: String((data && data.job) || ''),
+    destination: String((data && data.destination) || ''),
+    changes: Array.isArray(data && data.changes) ? clone(data.changes) : []
+  };
+}
+
+function ingestListEditLogs(docs){
+  (docs || []).forEach(({ id, data }) => {
+    if(!data) return;
+    S.listEditLogs.set(String(id), normalizeEditLog(id, data));
+  });
+  if(S.B && S.B.setListEditLogs){
+    S.B.setListEditLogs([...S.listEditLogs.values()]);
+  }
+  if(S.B && S.B.renderSoon) S.B.renderSoon();
+}
+
+async function pushListEditLog(entry){
+  if(!entry || !Array.isArray(entry.changes) || !entry.changes.length) return false;
+  const safeSerial = String(entry.serial || 'item').replace(/[\/\s]+/g, '_').slice(0, 60) || 'item';
+  const id = isSafeDocId(String(entry.id || ''))
+    ? String(entry.id)
+    : `edit__${safeSerial}__${Date.now()}_${randId()}`;
+  const localRow = normalizeEditLog(id, {
+    at: entry.at || new Date().toISOString(),
+    by: S.uid || '',
+    byId: (S.staff && S.staff.staffId) || entry.byId || '',
+    byName: (S.staff && (S.staff.name || S.staff.staffId)) || entry.byName || '',
+    serial: entry.serial || '',
+    customer: entry.customer || '',
+    job: entry.job || '',
+    destination: entry.destination || '',
+    changes: entry.changes
+  });
+  S.listEditLogs.set(id, localRow);
+  if(S.B && S.B.setListEditLogs) S.B.setListEditLogs([...S.listEditLogs.values()]);
+  if(S.B && S.B.renderSoon) S.B.renderSoon();
+  if(!S.store || !S.staff) return false;
+  if(!Policy.admin(S.staff) && !Policy.hasTab(S.staff, 'register')) return false;
+  try {
+    await S.store.runTx(async tx => {
+      tx.set('listEditLogs', id, {
+        at: TS,
+        by: S.uid,
+        byId: S.staff.staffId,
+        byName: localRow.byName,
+        serial: localRow.serial,
+        customer: localRow.customer,
+        job: localRow.job,
+        destination: localRow.destination,
+        changes: localRow.changes
+      });
+    });
+    S.listEditLogsRulesWarn = false;
+    return true;
+  } catch(e) {
+    const m = String((e && e.message) || e);
+    if(/permission/i.test(m)){
+      S.listEditLogsRulesWarn = true;
+      toast('修正内容は保存しました（修正履歴ログのクラウド保存には firestore.rules の更新が必要です）', 'warn');
+    } else {
+      toast('修正履歴ログの保存に失敗：' + m.slice(0, 120), 'warn');
+    }
+    if(S.B && S.B.renderSoon) S.B.renderSoon();
+    return false;
+  }
+}
+
+async function ensureListEditLogsRange(start){
+  if(!S.store || !S.staff) return;
+  if(!Policy.admin(S.staff) && !Policy.hasTab(S.staff, 'register')) return;
+  const s = String(start || '').trim();
+  if(!s) return;
+  if(S.listEditLogsSince && s >= S.listEditLogsSince && !S.listEditLogsRulesWarn) return;
+  const d = new Date(s + 'T00:00:00');
+  if(isNaN(d)) return;
+  try {
+    const docs = await S.store.colGet('listEditLogs', { field: 'at', op: '>=', value: d });
+    S.listEditLogsRulesWarn = false;
+    S.listEditLogsSince = s;
+    ingestListEditLogs(docs);
+  } catch(e) {
+    const m = String((e && e.message) || e);
+    if(/permission/i.test(m)) S.listEditLogsRulesWarn = true;
+    if(S.B && S.B.renderSoon) S.B.renderSoon();
+  }
+}
+
 /* ---------- 無料枠最優先・オンデマンド起動＆セッション維持リアルタイム購読 ---------- */
 function stopTabSubs(){
   if(S.tabSubs){
@@ -952,13 +1059,38 @@ function switchTab(tabId){
     return;
   }
 
-  // 5. リスト・積込・全体状況タブ
-  if(['dashboard', 'register', 'production', 'loading'].includes(tabId)){
+  // 5. リスト登録タブ（修正履歴ログの直近90日もオンデマンド購読）
+  if(tabId === 'register'){
+    if(!S.listUnsubs.length) startLists();
+    if(!S.tabSubs.has('register') && (Policy.admin(S.staff) || Policy.hasTab(S.staff, 'register'))){
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 90);
+      cutoff.setHours(0, 0, 0, 0);
+      S.listEditLogsSince = `${cutoff.getFullYear()}-${String(cutoff.getMonth()+1).padStart(2,'0')}-${String(cutoff.getDate()).padStart(2,'0')}`;
+      const u = S.store.colWatch('listEditLogs', { field: 'at', op: '>=', value: cutoff }, docs => {
+        S.listEditLogsRulesWarn = false;
+        ingestListEditLogs(docs);
+      }, e => {
+        const m = String((e && e.message) || e);
+        if(/permission/i.test(m)){
+          S.listEditLogsRulesWarn = true;
+          if(S.B && S.B.renderSoon) S.B.renderSoon();
+        } else {
+          toast('修正履歴ログの取得に失敗：' + m, 'err');
+        }
+      });
+      S.tabSubs.set('register', [u]);
+    }
+    return;
+  }
+
+  // 6. 工程・積込・全体状況タブ
+  if(['dashboard', 'production', 'loading'].includes(tabId)){
     if(!S.listUnsubs.length) startLists();
     return;
   }
 
-  // 6. 配送検索タブ（直近90日の完了案件・イベントをオンデマンド読込）
+  // 7. 配送検索タブ（直近90日の完了案件・イベントをオンデマンド読込）
   if(tabId === 'delivery-search'){
     if(!S.listUnsubs.length) startLists();
     if(!S.tabSubs.has('delivery') && !S.tabSubs.has('delivery-search')){
@@ -969,7 +1101,7 @@ function switchTab(tabId){
     return;
   }
 
-  // 7. 実績集計・データ管理タブ（常時購読不要）
+  // 8. 実績集計・データ管理タブ（常時購読不要）
 }
 
 function resync(){
@@ -977,6 +1109,7 @@ function resync(){
   S.reportClosedLists.clear(); S.reportLoadedSince = null;
   S.reportSummaries.clear(); S.reportSummaryFetched.clear();
   S.searchEvents.clear(); S.searchEventsSince = null;
+  S.listEditLogs.clear(); S.listEditLogsSince = null; S.listEditLogsRulesWarn = false;
   stopTabSubs();
   startLists();
   switchTab(S.activeTab);
@@ -1142,7 +1275,10 @@ function showLogin(m){
   const B = S.B;
   if(B){
     B.setLists([]); B.setEvents([]); B.setMeta({}); B.setStageBoard({}); B.setDeliveryBoard([]);
-    S.base.lists.clear(); S.base.events.clear(); S.base.boards.clear(); S.raw.clear(); B.renderSoon();
+    if(B.setListEditLogs) B.setListEditLogs([]);
+    S.base.lists.clear(); S.base.events.clear(); S.base.boards.clear(); S.raw.clear();
+    S.listEditLogs.clear(); S.listEditLogsSince = null; S.listEditLogsRulesWarn = false;
+    B.renderSoon();
   }
   document.body.classList.add('locked');
   const ov = document.getElementById('authOverlay');
@@ -1918,6 +2054,11 @@ async function exportAll(){
     auditDocs = await st.colGet('auditLogs', null, { orderBy: { field: 'at', dir: 'desc' }, limit: 200 });
     auditDocs.reverse();
   } catch(e){}
+  let editLogDocs = [];
+  try {
+    editLogDocs = await st.colGet('listEditLogs', null, { orderBy: { field: 'at', dir: 'desc' }, limit: 500 });
+    editLogDocs.reverse();
+  } catch(e){}
 
   const meta = {}, deliveryEvents = [];
   const outLists = lists.map(d => {
@@ -1965,7 +2106,8 @@ async function exportAll(){
     serialCounter: counter ? counter.last : 0,
     reportSummaries: reportSummaryDocs.map(r => stripServer(r.data)),
     staff: staffList,
-    auditLogs: auditDocs.map(a => a.data)
+    auditLogs: auditDocs.map(a => a.data),
+    listEditLogs: editLogDocs.map(a => normalizeEditLog(a.id, a.data))
   };
 }
 
@@ -2299,6 +2441,9 @@ const Sync = {
     initAuthListener();
   },
   pushLists, pushDelivery, pushStage, pushSettings, nextSerial,
+  pushListEditLog, ensureListEditLogsRange,
+  getListEditLogs: () => [...S.listEditLogs.values()],
+  hasListEditLogsRulesWarn: () => S.listEditLogsRulesWarn,
   exportAll, restore,
   switchTab,
   ensureReportRange,

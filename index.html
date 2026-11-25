@@ -430,9 +430,18 @@ body.on-stage .arch-toggle span{display:none}
 .thk-mid{background:#e2e8f0;color:#475569}
 .stage-table td.st-thk{white-space:normal}
 @media(max-width:760px){.stage-table tr.stage-row td.st-thk{grid-row:4!important;grid-column:2/9!important;white-space:normal;margin-right:0}.stage-table tr.stage-row td.st-thk .thk{margin:1px 3px 1px 0}}
+/* 修正履歴ログ */
+.el-list{display:flex;flex-direction:column;gap:4px}
+.el-item{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px;font-size:11.5px;line-height:1.35}
+.el-lbl{display:inline-block;padding:1px 6px;border-radius:4px;background:#e0ecff;color:#1e3a8a;font-weight:700;font-size:11px;white-space:nowrap}
+.el-before{color:#64748b;text-decoration:line-through;word-break:break-all}
+.el-arrow{color:#94a3b8;font-weight:700}
+.el-after{color:#0f172a;font-weight:700;background:#fef9c3;padding:0 4px;border-radius:4px;word-break:break-all}
+.el-who{font-weight:700;color:#0f172a}
+.el-who small{display:block;font-weight:400;color:#64748b;font-size:10.5px}
 </style>
-  <script src="firebase-config.js?v=20261124f"></script>
-  <script src="sync.js?v=20261124f"></script>
+  <script src="firebase-config.js?v=20261125a"></script>
+  <script src="sync.js?v=20261125a"></script>
 </head>
 <body>
 <header><div><h1>生産管理システム</h1></div></header>
@@ -492,6 +501,12 @@ body.on-stage .arch-toggle span{display:none}
 <div class="row no-print"><div class="field"><label>キーワード検索</label><input id="regSearch" placeholder="工程番号・工事名・需要家・納入先・備考（スペースで複数指定）"></div><div class="field"><label>納期（開始日）</label><input id="regDueStart" type="date"></div><div class="field"><label>納期（終了日）</label><input id="regDueEnd" type="date"></div></div>
 <div class="btn-bar no-print"><button class="btn secondary" type="button" id="regClearBtn">検索を解除</button></div><div id="regCount" class="help" style="margin:6px 0"></div>
 <div id="registerTable" class="tablewrap"></div></div>
+<details class="panel no-print" id="regEditLogPanel"><summary style="cursor:pointer;font-weight:700;font-size:15px">修正履歴ログ <span id="regEditLogSummaryCount" class="help" style="font-weight:400;margin-left:6px"></span></summary><p class="help" style="margin:8px 0">「登録済みリスト」の「修正」から内容を実際に変更した場合のみ、いつ・誰が・何を修正したかを記録します（変更がない場合は記録しません）。</p>
+<div id="regEditLogWarn" class="alert" style="display:none;margin-bottom:8px"></div>
+<div class="row no-print"><div class="field"><label>キーワード検索</label><input id="regEditLogSearch" placeholder="工程番号・修正者・工事名・修正項目など（スペースで複数指定）"></div><div class="field"><label>修正日（開始日）</label><input id="regEditLogStart" type="date"></div><div class="field"><label>修正日（終了日）</label><input id="regEditLogEnd" type="date"></div></div>
+<div class="btn-bar no-print"><button class="btn small secondary" type="button" id="regEditLogClearBtn">検索を解除</button></div>
+<div id="regEditLogCount" class="help" style="margin:6px 0"></div>
+<div id="regEditLogTable" class="tablewrap"></div></details>
 </section>
 <section id="production" class="page">
 <details class="panel no-print" id="prodDayPanel" open><summary style="cursor:pointer;font-weight:700;font-size:15px">工程別・作業日別の集計（枚数・角重量）</summary><p class="help" style="margin:8px 0">工程ごと、さらにその工程の作業日ごとに、件数・枚数・角重量を集計します。切断は「切断-ガス」「切断-プラズマ」のように切断方法ごとに小計を出し、キリ穴は穴数と穴径も出します。下の検索・絞り込みに連動します。</p><div id="prodDaySummary"></div></details>
@@ -771,7 +786,7 @@ function paginateTable(containerId,key){const box=$(containerId);if(!box)return;
 function changePage(key,delta){pagePrefs[key]=pagePrefs[key]||{size:50,page:1};pagePrefs[key].page+=delta;paginateTable(pageTargets[key],key)}
 function changePageSize(key,size){pagePrefs[key]={size:Number(size),page:1};paginateTable(pageTargets[key],key)}
 window.changePage=changePage;window.changePageSize=changePageSize;
-function paginateAll(){[['dashTable','dash'],['registerTable','register'],['prodTable','prod'],['loadTable','load'],['deliverySearchResults','deliverySearch'],['stage-cut-table','stage-cut'],['stage-bandsaw-table','stage-bandsaw'],['stage-kiri-table','stage-kiri'],['stage-shot-table','stage-shot'],['stage-bevel-table','stage-bevel'],['stage-bend-table','stage-bend'],['planResults','planResults'],['planMaterialSummary','planMaterial']].forEach(([id,key])=>paginateTable(id,key));}
+function paginateAll(){[['dashTable','dash'],['registerTable','register'],['regEditLogTable','regEditLog'],['prodTable','prod'],['loadTable','load'],['deliverySearchResults','deliverySearch'],['stage-cut-table','stage-cut'],['stage-bandsaw-table','stage-bandsaw'],['stage-kiri-table','stage-kiri'],['stage-shot-table','stage-shot'],['stage-bevel-table','stage-bevel'],['stage-bend-table','stage-bend'],['planResults','planResults'],['planMaterialSummary','planMaterial']].forEach(([id,key])=>paginateTable(id,key));}
 function visibleProdCheckboxes(){return [...document.querySelectorAll('#prodTable tbody tr')].filter(tr=>tr.style.display!=='none').map(tr=>tr.querySelector('.prod-row-select')).filter(Boolean)}
 function syncProdSelectAllBtn(){const btn=$('prodSelectVisibleBtn');if(!btn)return;const boxes=visibleProdCheckboxes();btn.disabled=!boxes.length;const allChecked=boxes.length>0&&boxes.every(cb=>cb.checked);btn.textContent=allChecked?'表示中の選択解除':'表示中を一括選択'}
 function toggleSelectVisibleProd(){const boxes=visibleProdCheckboxes();if(!boxes.length)return;const next=!boxes.every(cb=>cb.checked);boxes.forEach(cb=>{cb.checked=next});syncProdSelectAllBtn()}
@@ -800,10 +815,114 @@ function registerFilteredLists(){const norm=v=>String(v??"").normalize("NFKC").t
 ["regSearch","regDueStart","regDueEnd"].forEach(id=>$(id).addEventListener("input",()=>renderRegister()));$("regClearBtn").addEventListener("click",()=>{$("regSearch").value="";$("regDueStart").value="";$("regDueEnd").value="";renderRegister()});
 function renderRegister(){ const regData=registerFilteredLists();$("regCount").textContent=regData.length===lists.length?`全${lists.length}件`:`${regData.length}件 / 全${lists.length}件`; $("registerTable").innerHTML=table(["工程番号","納期","需要家","工事名 / 納入先","切断方法","CSV行数","角重量合計","操作"],regData.map(l=>`<tr><td>${esc(l.serial)}</td><td>${esc(dueLabel(l))}</td><td>${esc(l.customer||"－")}</td><td>${esc(l.job)}<br>${esc(l.destination)}${l.deliveryNote?`<br><span class="help">備考：${esc(l.deliveryNote)}</span>`:""}</td><td>${esc(cutLabel(l))}</td><td>${(l.rows||[]).length}</td><td>${fmt(total(l,"weight"))} kg</td><td><button type="button" class="btn small secondary" data-reg-action="details" data-serial="${esc(l.serial)}">詳細</button> <button type="button" class="btn small" data-reg-action="edit" data-serial="${esc(l.serial)}">修正</button> <button type="button" class="btn small danger" data-reg-action="delete" data-serial="${esc(l.serial)}">削除</button></td></tr>`));paginateTable("registerTable","register")}
 $("registerTable")?.addEventListener("click",e=>{const btn=e.target?.closest?.("button[data-reg-action]");if(!btn)return;const act=btn.dataset.regAction,s=btn.dataset.serial;if(act==="details")showDetails(s);else if(act==="edit")openEditList(s);else if(act==="delete")deleteList(s);});
+const LIST_EDIT_LOG_KEY="factory_link_list_edit_logs_v1";
+let listEditLogs=(()=>{if(IS_FS_MODE)return [];try{const a=JSON.parse(localStorage.getItem(LIST_EDIT_LOG_KEY)||"[]");return Array.isArray(a)?a:[]}catch(e){return []}})();
+function currentEditActor(){
+ const st=window.Sync&&window.Sync.staff?window.Sync.staff():null;
+ return {
+  byId:String((st&&st.staffId)||""),
+  byName:String((st&&(st.name||st.staffId))||"ローカル操作")
+ };
+}
+function editLogMs(row){
+ if(row&&Number.isFinite(Number(row.atMs))&&Number(row.atMs)>0)return Number(row.atMs);
+ const t=Date.parse(String(row?.at||""));
+ return Number.isFinite(t)?t:0;
+}
+function formatEditLogDateTime(at){
+ const d=new Date(at);
+ if(isNaN(d))return String(at||"");
+ const p2=n=>String(n).padStart(2,"0");
+ return `${d.getFullYear()}/${p2(d.getMonth()+1)}/${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+}
+function editLogDayStr(at){
+ const d=new Date(at);
+ if(isNaN(d))return String(at||"").slice(0,10);
+ const p2=n=>String(n).padStart(2,"0");
+ return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+}
+function allListEditLogs(){
+ const m=new Map();
+ listEditLogs.forEach(x=>{if(x&&x.id)m.set(String(x.id),x)});
+ if(window.Sync&&window.Sync.getListEditLogs){
+  window.Sync.getListEditLogs().forEach(x=>{if(x&&x.id)m.set(String(x.id),x)});
+ }
+ return [...m.values()].sort((a,b)=>editLogMs(b)-editLogMs(a));
+}
+function filteredListEditLogs(){
+ const norm=v=>String(v??"").normalize("NFKC").toLowerCase();
+ const words=norm($("regEditLogSearch")?.value||"").split(/\s+/).filter(Boolean);
+ const start=$("regEditLogStart")?.value||"",end=$("regEditLogEnd")?.value||"";
+ return allListEditLogs().filter(row=>{
+  const day=editLogDayStr(row.at);
+  if(start&&(!day||day<start))return false;
+  if(end&&(!day||day>end))return false;
+  if(!words.length)return true;
+  const chText=(row.changes||[]).map(c=>`${c.label||c.field||""} ${c.before??""} ${c.after??""}`).join(" ");
+  const hay=norm(`${formatEditLogDateTime(row.at)} ${row.byName||""} ${row.byId||""} ${row.serial||""} ${row.customer||""} ${row.job||""} ${row.destination||""} ${chText}`);
+  return words.every(w=>hay.includes(w));
+ });
+}
+function renderEditLogs(){
+ const box=$("regEditLogTable");if(!box)return;
+ const warn=$("regEditLogWarn");
+ if(warn){
+  const needRules=!!(window.Sync&&window.Sync.hasListEditLogsRulesWarn&&window.Sync.hasListEditLogsRulesWarn());
+  warn.style.display=needRules?"":"none";
+  if(needRules)warn.textContent="※ 修正履歴ログのクラウド保存・取得には Firebase Console の firestore.rules 更新が必要です。更新前の分はこのブラウザ上の記録のみ表示しています。";
+ }
+ const all=allListEditLogs();
+ const data=filteredListEditLogs();
+ const scnt=$("regEditLogSummaryCount");
+ if(scnt)scnt.textContent=all.length?`（${all.length}件）`:"";
+ const cnt=$("regEditLogCount");
+ if(cnt)cnt.textContent=data.length===all.length?`全${all.length}件`:`${data.length}件 / 全${all.length}件`;
+ box.innerHTML=data.length?table(["修正日時","修正者","工程番号","需要家 / 工事名 / 納入先","修正内容（変更前 → 変更後）"],data.map(row=>{
+  const chHtml=(row.changes||[]).map(c=>`<div class="el-item"><span class="el-lbl">${esc(c.label||c.field)}</span><span class="el-before">${esc(c.before)}</span><span class="el-arrow">→</span><span class="el-after">${esc(c.after)}</span></div>`).join("");
+  const whoHtml=`<span class="el-who">${esc(row.byName||row.byId||"不明")}${row.byId&&row.byName!==row.byId?`<small>ID: ${esc(row.byId)}</small>`:""}</span>`;
+  const targetHtml=`${row.customer?`<span class="help">${esc(row.customer)}</span><br>`:""}<b>${esc(row.job||"－")}</b>${row.destination?`<br><span class="help">${esc(row.destination)}</span>`:""}`;
+  return `<tr><td style="white-space:nowrap">${esc(formatEditLogDateTime(row.at))}</td><td style="white-space:nowrap">${whoHtml}</td><td><span class="badge">${esc(row.serial)}</span></td><td>${targetHtml}</td><td><div class="el-list">${chHtml}</div></td></tr>`;
+ })):'<div class="empty">修正履歴ログはまだありません</div>';
+ paginateTable("regEditLogTable","regEditLog");
+}
+async function loadEditLogsRange(){
+ const start=$("regEditLogStart")?.value||"";
+ if(start&&window.Sync&&window.Sync.on&&window.Sync.ensureListEditLogsRange){
+  try{await window.Sync.ensureListEditLogsRange(start)}catch(e){}
+ }
+ renderEditLogs();
+}
+function recordListEditLog(listObj,changes){
+ if(!changes||!changes.length)return;
+ const actor=currentEditActor();
+ const safeSerial=String(listObj.serial||"item").replace(/[\/\s]+/g,"_").slice(0,60)||"item";
+ const entry={
+  id:`edit__${safeSerial}__${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+  at:new Date().toISOString(),
+  atMs:Date.now(),
+  byId:actor.byId,
+  byName:actor.byName,
+  serial:String(listObj.serial||""),
+  customer:String(listObj.customer||""),
+  job:String(listObj.job||""),
+  destination:String(listObj.destination||""),
+  changes
+ };
+ listEditLogs=[entry,...listEditLogs.filter(x=>x&&x.id!==entry.id)];
+ if(!IS_FS_MODE){try{localStorage.setItem(LIST_EDIT_LOG_KEY,JSON.stringify(listEditLogs))}catch(e){}}
+ if(window.Sync&&window.Sync.on&&window.Sync.pushListEditLog){
+  window.Sync.pushListEditLog(entry);
+ }
+ renderEditLogs();
+}
+$("regEditLogSearch")?.addEventListener("input",renderEditLogs);
+$("regEditLogStart")?.addEventListener("change",loadEditLogsRange);
+$("regEditLogEnd")?.addEventListener("change",renderEditLogs);
+$("regEditLogClearBtn")?.addEventListener("click",()=>{if($("regEditLogSearch"))$("regEditLogSearch").value="";if($("regEditLogStart"))$("regEditLogStart").value="";if($("regEditLogEnd"))$("regEditLogEnd").value="";renderEditLogs()});
 let editingListSerial=null;
 function openEditList(serial){const l=lists.find(x=>String(x.serial)===String(serial));if(!l)return;editingListSerial=String(serial);$('editListSerial').textContent='工程番号：'+serial;$('editDue').value=dueStart(l)||'';$('editDueEnd').value=dueEnd(l)||dueStart(l)||'';$('editCustomer').value=l.customer||'';$('editJob').value=l.job||'';$('editDestination').value=l.destination||'';$('editDeliveryMethod').value=l.deliveryMethod||'';$('editCutMethod').value=l.cutMethod||'';$('editHoleDiameters').value=(l.holeDiameters||[]).join(', ');$('editHoleCount').value=l.holeCount??0;$('editNote').value=l.deliveryNote!==undefined?l.deliveryNote:'';$('editNote').placeholder=longSizeNote(l)?'未入力時の自動表示：'+longSizeNote(l):'配達表の備考と連動します';$('editProcessChoices').innerHTML=PROCESSES.map(p=>`<label><input type="checkbox" name="editProcess" value="${p}" ${(l.processes||[]).includes(p)?'checked':''}> ${p}</label>`).join('');$('editListMsg').textContent='';$('editListModal').style.display='block';}
 function closeEditList(){$('editListModal').style.display='none';editingListSerial=null}
-function saveEditList(){const l=lists.find(x=>String(x.serial)===String(editingListSerial));if(!l)return;const due=$('editDue').value,dueEnd=$('editDueEnd').value||due;if(!due){$('editListMsg').textContent='納期を入力してください。';return}if(dueEnd<due){$('editListMsg').textContent='納期の終了日は開始日以降にしてください。';return}const raw=$('editHoleDiameters').value.normalize('NFKC').replace(/[、，]/g,',');const diameters=[...new Set(raw.split(/[;,\s]+/).map(x=>x.trim()).filter(Boolean))];if(diameters.some(x=>!/^[0-9]+(?:\.[0-9]+)?$/.test(x))){$('editListMsg').textContent='穴径は数字で入力してください。例：10, 14, 18';return}const hc=$('editHoleCount').value;const holeCount=hc===''?0:Number(hc);if(!Number.isInteger(holeCount)||holeCount<0){$('editListMsg').textContent='合計穴数は0以上の整数で入力してください。';return}const nextProcesses=[...document.querySelectorAll('#editProcessChoices input[name="editProcess"]:checked')].map(x=>x.value);const previousProcesses=l.processes||[];const removed=previousProcesses.filter(p=>!nextProcesses.includes(p));const added=nextProcesses.filter(p=>!previousProcesses.includes(p));l.due=due;l.dueStart=due;l.dueEnd=dueEnd;l.customer=$('editCustomer').value.trim();l.job=$('editJob').value.trim();l.destination=$('editDestination').value.trim();l.deliveryMethod=$('editDeliveryMethod').value;l.cutMethod=$('editCutMethod').value;l.holeDiameters=diameters;l.holeCount=holeCount;l.processes=nextProcesses;l.fullyOutsourced=nextProcesses.length===0; l.processStatus=l.processStatus||{};l.processDates=l.processDates||{};removed.forEach(p=>{delete l.processStatus[p];delete l.processDates[p];if(l.processCompleted)delete l.processCompleted[p];if(l.processDoneDates)delete l.processDoneDates[p];if(l.processStarted)delete l.processStarted[p];if(l.processNotes)delete l.processNotes[p]});added.forEach(p=>{l.processStatus[p]='pending';l.processDates[p]=''});if($('editNote').value!==(l.deliveryNote!==undefined?l.deliveryNote:''))l.deliveryNote=$('editNote').value;save();closeEditList();}
+function saveEditList(){const l=lists.find(x=>String(x.serial)===String(editingListSerial));if(!l)return;const afterDue=$('editDue').value,afterDueEnd=$('editDueEnd').value||afterDue;if(!afterDue){$('editListMsg').textContent='納期を入力してください。';return}if(afterDueEnd<afterDue){$('editListMsg').textContent='納期の終了日は開始日以降にしてください。';return}const raw=$('editHoleDiameters').value.normalize('NFKC').replace(/[、，]/g,',');const diameters=[...new Set(raw.split(/[;,\s]+/).map(x=>x.trim()).filter(Boolean))];if(diameters.some(x=>!/^[0-9]+(?:\.[0-9]+)?$/.test(x))){$('editListMsg').textContent='穴径は数字で入力してください。例：10, 14, 18';return}const hc=$('editHoleCount').value;const holeCount=hc===''?0:Number(hc);if(!Number.isInteger(holeCount)||holeCount<0){$('editListMsg').textContent='合計穴数は0以上の整数で入力してください。';return}const nextProcesses=[...document.querySelectorAll('#editProcessChoices input[name="editProcess"]:checked')].map(x=>x.value);const beforeDue=dueStart(l)||'';const beforeDueEnd=dueEnd(l)||dueStart(l)||'';const beforeCustomer=String(l.customer||'').trim();const beforeJob=String(l.job||'').trim();const beforeDest=String(l.destination||'').trim();const beforeDeliv=String(l.deliveryMethod||'');const beforeCut=String(l.cutMethod||'');const beforeDias=[...new Set((l.holeDiameters||[]).map(x=>String(x).trim()).filter(Boolean))];const beforeHoleCount=Number(l.holeCount??0);const beforeNote=l.deliveryNote!==undefined?String(l.deliveryNote):'';const beforeProcs=PROCESSES.filter(p=>(l.processes||[]).includes(p));const afterProcs=PROCESSES.filter(p=>nextProcesses.includes(p));const afterCustomer=$('editCustomer').value.trim();const afterJob=$('editJob').value.trim();const afterDest=$('editDestination').value.trim();const afterDeliv=$('editDeliveryMethod').value;const afterCut=$('editCutMethod').value;const afterNote=$('editNote').value;const fmtVal=v=>(v===''||v===null||v===undefined)?'（空）':String(v);const fmtArr=a=>a.length?a.join('、'):'（なし）';const fmtProc=a=>a.length?a.map(p=>p==='キリ'?'キリ穴':p).join('、'):'なし（全外注）';const changes=[];if(afterDue!==beforeDue)changes.push({field:'dueStart',label:'納期（開始日）',before:fmtVal(beforeDue),after:fmtVal(afterDue)});if(afterDueEnd!==beforeDueEnd)changes.push({field:'dueEnd',label:'納期（終了日）',before:fmtVal(beforeDueEnd),after:fmtVal(afterDueEnd)});if(afterCustomer!==beforeCustomer)changes.push({field:'customer',label:'需要家',before:fmtVal(beforeCustomer),after:fmtVal(afterCustomer)});if(afterJob!==beforeJob)changes.push({field:'job',label:'工事名',before:fmtVal(beforeJob),after:fmtVal(afterJob)});if(afterDest!==beforeDest)changes.push({field:'destination',label:'納入先',before:fmtVal(beforeDest),after:fmtVal(afterDest)});if(afterDeliv!==beforeDeliv)changes.push({field:'deliveryMethod',label:'配送方法',before:beforeDeliv||'未指定',after:afterDeliv||'未指定'});if(afterCut!==beforeCut)changes.push({field:'cutMethod',label:'切断方法',before:beforeCut||'未指定',after:afterCut||'未指定'});if(beforeDias.join(',')!==diameters.join(','))changes.push({field:'holeDiameters',label:'穴径（mm）',before:fmtArr(beforeDias),after:fmtArr(diameters)});if(holeCount!==beforeHoleCount)changes.push({field:'holeCount',label:'合計穴数',before:String(beforeHoleCount),after:String(holeCount)});if(afterNote!==beforeNote)changes.push({field:'deliveryNote',label:'備考',before:fmtVal(beforeNote),after:fmtVal(afterNote)});if(beforeProcs.join(',')!==afterProcs.join(','))changes.push({field:'processes',label:'必要工程',before:fmtProc(beforeProcs),after:fmtProc(afterProcs)});if(!changes.length){closeEditList();return;}const previousProcesses=l.processes||[];const removed=previousProcesses.filter(p=>!nextProcesses.includes(p));const added=nextProcesses.filter(p=>!previousProcesses.includes(p));l.due=afterDue;l.dueStart=afterDue;l.dueEnd=afterDueEnd;l.customer=afterCustomer;l.job=afterJob;l.destination=afterDest;l.deliveryMethod=afterDeliv;l.cutMethod=afterCut;l.holeDiameters=diameters;l.holeCount=holeCount;l.processes=nextProcesses;l.fullyOutsourced=nextProcesses.length===0; l.processStatus=l.processStatus||{};l.processDates=l.processDates||{};removed.forEach(p=>{delete l.processStatus[p];delete l.processDates[p];if(l.processCompleted)delete l.processCompleted[p];if(l.processDoneDates)delete l.processDoneDates[p];if(l.processStarted)delete l.processStarted[p];if(l.processNotes)delete l.processNotes[p]});added.forEach(p=>{l.processStatus[p]='pending';l.processDates[p]=''});if(afterNote!==beforeNote)l.deliveryNote=afterNote;save();recordListEditLog(l,changes);closeEditList();}
 window.openEditList=openEditList;window.closeEditList=closeEditList;window.saveEditList=saveEditList;
 function prodFilteredLists(){const norm=v=>String(v??"").normalize("NFKC").toLowerCase();const words=norm($("prodKeyword")?.value||"").split(/\s+/).filter(Boolean);const start=$("prodDueStart")?.value||"",end=$("prodDueEnd")?.value||"",noDate=!!$("prodNoDate")?.checked;return activeLists().filter(l=>(l.processes||[]).length>0).filter(l=>{if(noDate&&!(l.processes||[]).some(p=>!l.processDates?.[p]))return false;if((start||end)&&!overlapsDue(l,start,end))return false;if(!words.length)return true;const hay=norm(`${l.serial} ${l.job} ${l.customer||""} ${l.destination} ${l.deliveryNote||""} ${cutLabel(l)} ${(l.processes||[]).join(" ")} ${dueLabel(l)} ${dueStart(l)} ${dueEnd(l)}`);return words.every(w=>hay.includes(w))}).sort((a,b)=>String(dueStart(a)||"9999-99-99").localeCompare(String(dueStart(b)||"9999-99-99"))||String(dueEnd(a)||"9999-99-99").localeCompare(String(dueEnd(b)||"9999-99-99"))||String(a.serial||"").localeCompare(String(b.serial||""),undefined,{numeric:true}))}
 ["prodKeyword","prodDueStart","prodDueEnd"].forEach(id=>$(id).addEventListener("input",()=>renderProd()));$("prodNoDate").addEventListener("change",()=>renderProd());$("prodClearBtn").addEventListener("click",()=>{$("prodKeyword").value="";$("prodDueStart").value="";$("prodDueEnd").value="";$("prodNoDate").checked=false;renderProd()});
@@ -1856,7 +1975,7 @@ $("resetBtn").onclick=()=>{
  const d=new Date(),p2=n=>String(n).padStart(2,"0"),fname=`factory-link-backup-${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}.json`;
  try{downloadBackup(fname)}catch(err){$("resetMsg").textContent="バックアップの書き出しに失敗したため、消去を中止しました。";return}
  setTimeout(()=>{lists=[];deliveryBoard=[];deliveryEvents=[];deliveryMeta={};stageBoard={};persistDelivery();persistStageBoard();save();$("resetMsg").textContent=`全データを消去しました。消去前のバックアップを「${fname}」として書き出しています（復元はデータのバックアップの「ファイルを選択」から）。`},700)};
-function renderAll(){updateArchCount();renderStats();renderDash();renderRegister();renderProd();renderLoad();renderPlan();renderStages();if($("deliveryBoardTable"))renderDeliveryBoard();if($("deliverySearchResults"))renderDeliverySearch();if($("reportBody"))renderReport();paginateAll()}
+function renderAll(){updateArchCount();renderStats();renderDash();renderRegister();if($("regEditLogTable"))renderEditLogs();renderProd();renderLoad();renderPlan();renderStages();if($("deliveryBoardTable"))renderDeliveryBoard();if($("deliverySearchResults"))renderDeliverySearch();if($("reportBody"))renderReport();paginateAll()}
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
   if(window.Sync && window.Sync.switchTab){
     window.Sync.switchTab(b.dataset.page);
@@ -2754,7 +2873,7 @@ processUI();renderAll();
 if(window.Sync&&window.Sync.boot){
   let renderTimer=null;
   const clearBizLocalStorage=()=>{
-    [KEY,EVENT_KEY,DELIVERY_META_KEY,STAGE_ORDER_KEY,DELIVERY_BOARD_KEY,CUT_SPEED_KEY,SERIAL_KEY,"factory_link_event_seq_v1"].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});
+    [KEY,EVENT_KEY,DELIVERY_META_KEY,STAGE_ORDER_KEY,DELIVERY_BOARD_KEY,CUT_SPEED_KEY,SERIAL_KEY,LIST_EDIT_LOG_KEY,"factory_link_event_seq_v1"].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});
   };
   if(IS_FS_MODE)clearBizLocalStorage();
   const bridge={
@@ -2770,6 +2889,7 @@ if(window.Sync&&window.Sync.boot){
     setDeliveryBoard:db=>{deliveryBoard=db;if(!IS_FS_MODE)localStorage.setItem(DELIVERY_BOARD_KEY,JSON.stringify(deliveryBoard))},
     getCutSpeeds:()=>cutSpeeds,
     setCutSpeeds:cs=>{cutSpeeds=cs;if(!IS_FS_MODE)localStorage.setItem(CUT_SPEED_KEY,JSON.stringify(cutSpeeds))},
+    setListEditLogs:logs=>{listEditLogs=Array.isArray(logs)?logs:[];if(!IS_FS_MODE)localStorage.setItem(LIST_EDIT_LOG_KEY,JSON.stringify(listEditLogs))},
     clearLocalCache:clearBizLocalStorage,
     loadCompleteDay:loadCompleteDay,
     normalize:normalizeListData,
